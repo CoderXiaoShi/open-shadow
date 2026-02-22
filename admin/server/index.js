@@ -14,7 +14,9 @@ const Permission = require('./models/permission');
 const Log = require('./models/log');
 
 User.associate({ Role, Menu, Permission, Log });
-Role.associate({ User });
+Role.associate({ User, Permission });
+Menu.associate({ Permission });
+Permission.associate({ Role, Menu });
 
 const app = new Koa();
 const port = 3000;

@@ -7,26 +7,27 @@ const Role = sequelize.define('Role', {
     primaryKey: true,
     autoIncrement: true
   },
-  name: {
+  role_name: {
+    type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  role_code: {
     type: DataTypes.STRING(50),
     allowNull: false,
     unique: true
   },
   description: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(200),
     allowNull: true
   },
   status: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.TINYINT,
     allowNull: false,
     defaultValue: 1
   }
 }, {
-  tableName: 'roles'
+  tableName: 'sys_role',
+  timestamps: false
 });
-
-Role.associate = (models) => {
-  Role.hasMany(models.User, { foreignKey: 'role_id', as: 'users' });
-};
 
 module.exports = Role;

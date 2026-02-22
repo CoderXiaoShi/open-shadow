@@ -1,5 +1,7 @@
 const User = require('../models/user');
 const Role = require('../models/role');
+const Menu = require('../models/menu');
+const Permission = require('../models/permission');
 const Log = require('../models/log');
 const { generateToken } = require('../utils/jwt');
 const { logger, errorLogger } = require('../utils/logger');
@@ -128,10 +130,26 @@ const userController = {
         }]
       });
 
+      let menus = [];
+      if (user.role_id) {
+        const permissions = await Permission.findAll({
+          where: { role_id: user.role_id },
+          include: [{
+            model: Menu,
+            as: 'menu',
+            where: { status: 1 }
+          }]
+        });
+        menus = permissions.map(p => p.menu).filter(Boolean);
+      }
+
       ctx.body = {
         code: 200,
         message: '获取用户信息成功',
-        data: user
+        data: {
+          ...user.toJSON(),
+          menus
+        }
       };
     } catch (error) {
       errorLogger.error('获取用户信息失败:', error);
@@ -169,41 +187,77 @@ const userController = {
   },
 
   async updateUser(ctx) {
-    const { id, nickname, email, role_id, status } = ctx.request.body;
+    const { id, username, password, nickname, email, role_id, status } = ctx.request.body;
     try {
-      const user = await User.findByPk(id);
-      if (!user) {
-        ctx.status = 404;
+      if (id) {
+        const user = await User.findByPk(id);
+        if (!user) {
+          ctx.status = 404;
+          ctx.body = {
+            code: 404,
+            message: '用户不存在'
+          };
+          return;
+        }
+
+        const updateData = { nickname, email, role_id, status };
+        if (password) {
+          updateData.password = password;
+        }
+
+        await user.update(updateData);
+
+        await Log.create({
+          user_id: ctx.user.id,
+          username: ctx.user.username,
+          action: '更新用户',
+          module: '用户管理',
+          ip: ctx.request.ip,
+          result: 1,
+          message: `更新用户 ${user.username} 成功`
+        });
+
         ctx.body = {
-          code: 404,
-          message: '用户不存在'
+          code: 200,
+          message: '更新用户成功',
+          data: user
         };
-        return;
+      } else {
+        const existingUser = await User.findOne({ where: { username } });
+        if (existingUser) {
+          ctx.status = 400;
+          ctx.body = {
+            code: 400,
+            message: '用户名已存在'
+          };
+          return;
+        }
+
+        const user = await User.create({
+          username,
+          password,
+          nickname,
+          email,
+          role_id,
+          status
+        });
+
+        await Log.create({
+          user_id: ctx.user.id,
+          username: ctx.user.username,
+          action: '创建用户',
+          module: '用户管理',
+          ip: ctx.request.ip,
+          result: 1,
+          message: `创建用户 ${username} 成功`
+        });
+
+        ctx.body = {
+          code: 200,
+          message: '创建用户成功',
+          data: user
+        };
       }
-
-      await user.update({
-        nickname,
-        email,
-        role_id,
-        status
-      });
-
-      // 记录更新日志
-      await Log.create({
-        user_id: ctx.user.id,
-        username: ctx.user.username,
-        action: '更新用户',
-        module: '用户管理',
-        ip: ctx.request.ip,
-        result: 1,
-        message: `更新用户 ${user.username} 成功`
-      });
-
-      ctx.body = {
-        code: 200,
-        message: '更新用户成功',
-        data: user
-      };
     } catch (error) {
       errorLogger.error('更新用户失败:', error);
       ctx.status = 500;

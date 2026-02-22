@@ -25,4 +25,9 @@ const Permission = sequelize.define('Permission', {
   ]
 });
 
+Permission.associate = (models) => {
+  Permission.belongsTo(models.Role, { foreignKey: 'role_id', as: 'role' });
+  Permission.belongsTo(models.Menu, { foreignKey: 'menu_id', as: 'menu' });
+};
+
 module.exports = Permission;

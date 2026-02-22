@@ -55,4 +55,23 @@ export const upload = {
   deleteFile: (fileName) => api.delete(`/files/${fileName}`)
 };
 
+export const role = {
+  getRoles: () => api.get('/roles'),
+  getRole: (id) => api.get(`/roles/${id}`),
+  createRole: (data) => api.post('/roles', data),
+  updateRole: (id, data) => api.put(`/roles/${id}`, data),
+  deleteRole: (id) => api.delete(`/roles/${id}`),
+  getRolePermissions: (id) => api.get(`/roles/${id}/permissions`),
+  assignPermissions: (id, menu_ids) => api.post(`/roles/${id}/permissions`, { menu_ids })
+};
+
+export const menu = {
+  getMenus: () => api.get('/menus'),
+  getMenuTree: () => api.get('/menus/tree'),
+  getMenu: (id) => api.get(`/menus/${id}`),
+  createMenu: (data) => api.post('/menus', data),
+  updateMenu: (id, data) => api.put(`/menus/${id}`, data),
+  deleteMenu: (id) => api.delete(`/menus/${id}`)
+};
+
 export default api;

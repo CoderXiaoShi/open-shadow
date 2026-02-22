@@ -1,39 +1,80 @@
 <template>
   <div class="home">
-    <h2>欢迎使用管理系统</h2>
-    <div class="stats">
-      <div class="stat-card">
-        <div class="stat-value">{{ stats.userCount }}</div>
-        <div class="stat-label">用户总数</div>
+    <el-row :gutter="20">
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <el-statistic title="用户总数" :value="stats.userCount">
+            <template #prefix>
+              <el-icon><User /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <el-statistic title="文件数量" :value="stats.fileCount">
+            <template #prefix>
+              <el-icon><Folder /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <el-statistic title="角色数量" :value="stats.roleCount">
+            <template #prefix>
+              <el-icon><UserFilled /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-card style="margin-top: 20px">
+      <template #header>
+        <span>欢迎使用管理系统</span>
+      </template>
+      <div class="welcome">
+        <p>当前登录用户：{{ username }}</p>
+        <p>角色：{{ roleName }}</p>
+        <p>欢迎使用本系统，请从左侧菜单选择功能。</p>
       </div>
-      <div class="stat-card">
-        <div class="stat-value">{{ stats.fileCount }}</div>
-        <div class="stat-label">文件数量</div>
-      </div>
-    </div>
+    </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { user, upload } from '../api';
+import { ref, onMounted, computed } from 'vue';
+import { user, upload, role } from '../api';
+import { useUserStore } from '../stores/user';
+import { User, Folder, UserFilled } from '@element-plus/icons-vue';
+
+const userStore = useUserStore();
 
 const stats = ref({
   userCount: 0,
-  fileCount: 0
+  fileCount: 0,
+  roleCount: 0
 });
+
+const username = computed(() => userStore.userInfo?.username || '-');
+const roleName = computed(() => userStore.userInfo?.role?.name || '-');
 
 const loadStats = async () => {
   try {
-    const [userRes, fileRes] = await Promise.all([
+    const [userRes, fileRes, roleRes] = await Promise.all([
       user.getUsers(),
-      upload.getFiles()
+      upload.getFiles(),
+      role.getRoles()
     ]);
     if (userRes.code === 200) {
       stats.value.userCount = userRes.data?.length || 0;
     }
     if (fileRes.code === 200) {
       stats.value.fileCount = fileRes.data?.length || 0;
+    }
+    if (roleRes.code === 200) {
+      stats.value.roleCount = roleRes.data?.length || 0;
     }
   } catch (e) {
     console.error('加载统计失败', e);
@@ -46,32 +87,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.home h2 {
-  margin-bottom: 20px;
-}
-
-.stats {
-  display: flex;
-  gap: 20px;
-}
-
-.stat-card {
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-width: 200px;
-}
-
-.stat-value {
-  font-size: 36px;
-  font-weight: bold;
-  color: #409eff;
-  margin-bottom: 10px;
-}
-
-.stat-label {
+.welcome {
   color: #666;
-  font-size: 14px;
+  line-height: 2;
 }
 </style>

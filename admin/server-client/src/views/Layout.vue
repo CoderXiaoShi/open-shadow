@@ -1,62 +1,80 @@
 <template>
-  <div class="layout">
-    <aside class="sidebar">
+  <el-container class="layout-container">
+    <el-aside width="200px">
       <div class="logo">Admin System</div>
-      <nav class="menu">
-        <router-link to="/home" class="menu-item">
-          <span>首页</span>
-        </router-link>
-        <router-link to="/user" class="menu-item">
-          <span>用户管理</span>
-        </router-link>
-        <router-link to="/file" class="menu-item">
-          <span>文件管理</span>
-        </router-link>
-      </nav>
-    </aside>
-    <div class="main">
-      <header class="header">
+      <el-menu
+        :default-active="$route.path"
+        class="el-menu-vertical"
+        background-color="#304156"
+        text-color="#bfcbd9"
+        active-text-color="#409eff"
+        router
+      >
+        <el-menu-item v-for="menu in visibleMenus" :key="menu.path" :index="menu.path">
+          <span>{{ menu.name }}</span>
+        </el-menu-item>
+      </el-menu>
+    </el-aside>
+    <el-container>
+      <el-header>
         <div class="header-title">管理系统</div>
         <div class="header-user">
-          <span>{{ username }}</span>
-          <button @click="handleLogout">退出</button>
+          <span>{{ username }} ({{ roleName }})</span>
+          <el-button type="danger" size="small" @click="handleLogout">退出</el-button>
         </div>
-      </header>
-      <main class="content">
+      </el-header>
+      <el-main>
         <router-view />
-      </main>
-    </div>
-  </div>
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../stores/user';
+import { ElMessageBox } from 'element-plus';
 
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 
 const username = computed(() => userStore.userInfo?.username || 'Admin');
+const roleName = computed(() => userStore.userInfo?.role?.name || '');
+
+const visibleMenus = computed(() => {
+  if (userStore.isAdmin) {
+    return [
+      { name: '首页', path: '/home' },
+      { name: '用户管理', path: '/user' },
+      { name: '角色管理', path: '/role' },
+      { name: '菜单管理', path: '/menu' },
+      { name: '文件管理', path: '/file' }
+    ];
+  }
+  return userStore.menus || [];
+});
 
 const handleLogout = () => {
-  userStore.logout();
-  router.push('/login');
+  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    userStore.logout();
+    router.push('/login');
+  }).catch(() => {});
 };
 </script>
 
 <style scoped>
-.layout {
-  display: flex;
+.layout-container {
   height: 100vh;
 }
 
-.sidebar {
-  width: 200px;
-  background: #304156;
-  color: white;
-  display: flex;
-  flex-direction: column;
+.el-aside {
+  background-color: #304156;
 }
 
 .logo {
@@ -66,38 +84,16 @@ const handleLogout = () => {
   justify-content: center;
   font-size: 18px;
   font-weight: bold;
+  color: white;
   border-bottom: 1px solid #3d4d5e;
 }
 
-.menu {
-  flex: 1;
-  padding: 10px 0;
+.el-menu-vertical {
+  border: none;
 }
 
-.menu-item {
-  display: block;
-  padding: 15px 20px;
-  color: #bfcbd9;
-  text-decoration: none;
-  transition: all 0.3s;
-}
-
-.menu-item:hover,
-.menu-item.router-link-active {
-  background: #263445;
-  color: #409eff;
-}
-
-.main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.header {
-  height: 60px;
-  background: white;
+.el-header {
+  background-color: white;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -116,19 +112,8 @@ const handleLogout = () => {
   gap: 15px;
 }
 
-.header-user button {
-  padding: 6px 15px;
-  background: #ff4444;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.content {
-  flex: 1;
+.el-main {
+  background-color: #f0f2f5;
   padding: 20px;
-  background: #f0f2f5;
-  overflow-y: auto;
 }
 </style>

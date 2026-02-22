@@ -1,43 +1,55 @@
 <template>
   <div class="file-page">
-    <div class="toolbar">
-      <h2>文件管理</h2>
-      <div>
-        <input type="file" ref="fileInput" @change="handleFileChange" style="display: none" />
-        <button @click="$refs.fileInput.click()">上传文件</button>
-      </div>
-    </div>
+    <el-card>
+      <template #header>
+        <div class="card-header">
+          <span>文件管理</span>
+          <el-upload
+            :action="uploadUrl"
+            :headers="uploadHeaders"
+            :show-file-list="false"
+            :on-success="handleUploadSuccess"
+            :before-upload="beforeUpload"
+          >
+            <el-button type="primary">上传文件</el-button>
+          </el-upload>
+        </div>
+      </template>
 
-    <table class="table">
-      <thead>
-        <tr>
-          <th>文件名</th>
-          <th>大小</th>
-          <th>上传时间</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in files" :key="item.fileName">
-          <td>{{ item.fileName }}</td>
-          <td>{{ formatSize(item.size) }}</td>
-          <td>{{ formatDate(item.createdAt) }}</td>
-          <td>
-            <a class="btn-download" :href="item.filePath" target="_blank">下载</a>
-            <button class="btn-delete" @click="handleDelete(item.fileName)">删除</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+      <el-table :data="files" stripe>
+        <el-table-column prop="fileName" label="文件名" />
+        <el-table-column prop="size" label="大小" width="120">
+          <template #default="{ row }">
+            {{ formatSize(row.size) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="上传时间" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="150">
+          <template #default="{ row }">
+            <el-button type="primary" size="small" @click="handleDownload(row.filePath)">下载</el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row.fileName)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { upload } from '../api';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 const files = ref([]);
-const fileInput = ref(null);
+
+const uploadUrl = '/api/upload';
+const uploadHeaders = {
+  Authorization: `Bearer ${localStorage.getItem('token')}`
+};
 
 const loadFiles = async () => {
   const res = await upload.getFiles();
@@ -46,30 +58,38 @@ const loadFiles = async () => {
   }
 };
 
-const handleFileChange = async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    await upload.uploadFile(formData);
-    loadFiles();
-    event.target.value = '';
-  } catch (e) {
-    alert('上传失败: ' + e.message);
+const beforeUpload = (file) => {
+  const isLt10M = file.size / 1024 / 1024 < 10;
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过 10MB');
+    return false;
   }
+  return true;
 };
 
-const handleDelete = async (filename) => {
-  if (!confirm('确定要删除该文件吗？')) return;
-  try {
-    await upload.deleteFile(filename);
-    loadFiles();
-  } catch (e) {
-    alert(e.message);
-  }
+const handleUploadSuccess = () => {
+  ElMessage.success('上传成功');
+  loadFiles();
+};
+
+const handleDownload = (filePath) => {
+  window.open(filePath, '_blank');
+};
+
+const handleDelete = (fileName) => {
+  ElMessageBox.confirm('确定要删除该文件吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await upload.deleteFile(fileName);
+      ElMessage.success('删除成功');
+      loadFiles();
+    } catch (e) {
+      ElMessage.error(e.message);
+    }
+  }).catch(() => {});
 };
 
 const formatSize = (bytes) => {
@@ -90,59 +110,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.toolbar {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-}
-
-.toolbar button {
-  padding: 10px 20px;
-  background: #409eff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.table {
-  width: 100%;
-  background: white;
-  border-collapse: collapse;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.table th,
-.table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f5f7fa;
-  font-weight: bold;
-}
-
-.btn-download,
-.btn-delete {
-  padding: 5px 10px;
-  margin-right: 5px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-download {
-  background: #67c23a;
-  color: white;
-  text-decoration: none;
-}
-
-.btn-delete {
-  background: #ff4444;
-  color: white;
 }
 </style>

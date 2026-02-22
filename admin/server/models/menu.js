@@ -42,4 +42,8 @@ const Menu = sequelize.define('Menu', {
   tableName: 'menus'
 });
 
+Menu.associate = (models) => {
+  Menu.hasMany(models.Permission, { foreignKey: 'menu_id', as: 'permissions' });
+};
+
 module.exports = Menu;
