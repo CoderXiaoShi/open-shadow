@@ -23,20 +23,16 @@ const User = sequelize.define('User', {
   },
   email: {
     type: DataTypes.STRING(100),
-    allowNull: true,
-    unique: true
-  },
-  role_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
   },
   status: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.TINYINT,
     allowNull: false,
     defaultValue: 1
   }
 }, {
-  tableName: 'users',
+  tableName: 'sys_user',
+  timestamps: false,
   hooks: {
     beforeCreate: async (user) => {
       if (user.password) {
@@ -55,10 +51,6 @@ const User = sequelize.define('User', {
 
 User.prototype.comparePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
-};
-
-User.associate = (models) => {
-  User.belongsTo(models.Role, { foreignKey: 'role_id', as: 'role' });
 };
 
 module.exports = User;
