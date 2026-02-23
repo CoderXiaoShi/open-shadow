@@ -10,7 +10,8 @@
 
       <el-table :data="roles" stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="角色名称" />
+        <el-table-column prop="role_name" label="角色名称" />
+        <el-table-column prop="role_code" label="角色编码" />
         <el-table-column prop="description" label="描述">
           <template #default="{ row }">
             {{ row.description || '-' }}
@@ -19,7 +20,7 @@
         <el-table-column prop="status" label="状态">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'info'">
-              {{ row.status === 1 ? '正常' : '禁用' }}
+              {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -38,16 +39,19 @@
       :title="isEdit ? '编辑角色' : '新增角色'"
       width="500px"
     >
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
-        <el-form-item label="角色名称" prop="name">
-          <el-input v-model="form.name" />
+      <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
+        <el-form-item label="角色名称" prop="role_name">
+          <el-input v-model="form.role_name" />
+        </el-form-item>
+        <el-form-item label="角色编码" prop="role_code">
+          <el-input v-model="form.role_code" :disabled="isEdit" />
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="3" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status">
-            <el-option :value="1" label="正常" />
+            <el-option :value="1" label="启用" />
             <el-option :value="0" label="禁用" />
           </el-select>
         </el-form-item>
@@ -61,18 +65,16 @@
     <el-dialog
       v-model="permissionDialogVisible"
       title="分配权限"
-      width="500px"
+      width="600px"
     >
-      <div class="permission-tree">
-        <el-checkbox
-          v-for="menu in menus"
-          :key="menu.id"
-          v-model="selectedMenus"
-          :label="menu.id"
-        >
-          {{ menu.name }}
-        </el-checkbox>
-      </div>
+      <el-tree
+        ref="treeRef"
+        :data="permissionTree"
+        :props="treeProps"
+        show-checkbox
+        node-key="id"
+        :default-checked-keys="checkedPermissions"
+      />
       <template #footer>
         <el-button @click="permissionDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="savePermissions" :loading="loading">保存</el-button>
@@ -82,30 +84,40 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { role, menu } from '../api';
+import { ref, reactive, onMounted, nextTick } from 'vue';
+import { role, permission } from '../api';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 const roles = ref([]);
-const menus = ref([]);
+const permissionTree = ref([]);
 const dialogVisible = ref(false);
 const permissionDialogVisible = ref(false);
 const isEdit = ref(false);
 const loading = ref(false);
 const formRef = ref(null);
+const treeRef = ref(null);
 const currentRole = ref(null);
-const selectedMenus = ref([]);
+const checkedPermissions = ref([]);
+
+const treeProps = {
+  children: 'children',
+  label: 'permission_name'
+};
 
 const form = reactive({
   id: null,
-  name: '',
+  role_name: '',
+  role_code: '',
   description: '',
   status: 1
 });
 
 const rules = {
-  name: [
+  role_name: [
     { required: true, message: '请输入角色名称', trigger: 'blur' }
+  ],
+  role_code: [
+    { required: true, message: '请输入角色编码', trigger: 'blur' }
   ]
 };
 
@@ -116,10 +128,10 @@ const loadRoles = async () => {
   }
 };
 
-const loadMenus = async () => {
-  const res = await menu.getMenus();
+const loadPermissions = async () => {
+  const res = await permission.getPermissionTree();
   if (res.code === 200) {
-    menus.value = res.data || [];
+    permissionTree.value = res.data || [];
   }
 };
 
@@ -127,13 +139,15 @@ const openDialog = (row = null) => {
   if (row) {
     isEdit.value = true;
     form.id = row.id;
-    form.name = row.name;
+    form.role_name = row.role_name;
+    form.role_code = row.role_code;
     form.description = row.description || '';
     form.status = row.status;
   } else {
     isEdit.value = false;
     form.id = null;
-    form.name = '';
+    form.role_name = '';
+    form.role_code = '';
     form.description = '';
     form.status = 1;
   }
@@ -185,10 +199,10 @@ const openPermissionDialog = async (row) => {
   try {
     const res = await role.getRolePermissions(row.id);
     if (res.code === 200) {
-      selectedMenus.value = res.data || [];
+      checkedPermissions.value = res.data || [];
     }
   } catch (e) {
-    selectedMenus.value = [];
+    checkedPermissions.value = [];
   }
   permissionDialogVisible.value = true;
 };
@@ -196,7 +210,9 @@ const openPermissionDialog = async (row) => {
 const savePermissions = async () => {
   loading.value = true;
   try {
-    await role.assignPermissions(currentRole.value.id, selectedMenus.value);
+    const checkedNodes = treeRef.value.getCheckedNodes(false, true);
+    const permissionIds = checkedNodes.map(n => n.id);
+    await role.assignPermissions(currentRole.value.id, permissionIds);
     ElMessage.success('权限分配成功');
     permissionDialogVisible.value = false;
   } catch (e) {
@@ -208,7 +224,7 @@ const savePermissions = async () => {
 
 onMounted(() => {
   loadRoles();
-  loadMenus();
+  loadPermissions();
 });
 </script>
 
@@ -217,15 +233,5 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.permission-tree {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.permission-tree .el-checkbox {
-  display: block;
-  margin: 10px 0;
 }
 </style>

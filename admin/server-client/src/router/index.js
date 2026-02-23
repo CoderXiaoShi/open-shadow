@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { useUserStore } from '../stores/user';
 
 const routes = [
   {
@@ -19,18 +18,18 @@ const routes = [
         component: () => import('../views/Home.vue')
       },
       {
-        path: '/user',
-        name: 'User',
+        path: '/system/user',
+        name: 'SystemUser',
         component: () => import('../views/User.vue')
       },
       {
-        path: '/role',
-        name: 'Role',
+        path: '/system/role',
+        name: 'SystemRole',
         component: () => import('../views/Role.vue')
       },
       {
-        path: '/menu',
-        name: 'Menu',
+        path: '/system/menu',
+        name: 'SystemMenu',
         component: () => import('../views/Menu.vue')
       },
       {
@@ -45,17 +44,6 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
-});
-
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token');
-  if (to.path !== '/login' && !token) {
-    next('/login');
-  } else if (to.path === '/login' && token) {
-    next('/');
-  } else {
-    next();
-  }
 });
 
 export default router;

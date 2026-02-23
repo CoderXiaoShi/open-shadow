@@ -3,23 +3,33 @@
     <el-aside width="200px">
       <div class="logo">Admin System</div>
       <el-menu
-        :default-active="$route.path"
+        :default-active="activeMenu"
         class="el-menu-vertical"
         background-color="#304156"
         text-color="#bfcbd9"
         active-text-color="#409eff"
         router
       >
-        <el-menu-item v-for="menu in visibleMenus" :key="menu.path" :index="menu.path">
-          <span>{{ menu.name }}</span>
-        </el-menu-item>
+        <template v-for="menu in menus">
+          <el-sub-menu v-if="menu.children && menu.children.length" :key="menu.id" :index="String(menu.id)">
+            <template #title>
+              <span>{{ menu.permission_name }}</span>
+            </template>
+            <el-menu-item v-for="child in menu.children" :key="child.id" :index="child.path">
+              {{ child.permission_name }}
+            </el-menu-item>
+          </el-sub-menu>
+          <el-menu-item v-else :key="menu.id" :index="menu.path">
+            <span>{{ menu.permission_name }}</span>
+          </el-menu-item>
+        </template>
       </el-menu>
     </el-aside>
     <el-container>
       <el-header>
         <div class="header-title">管理系统</div>
         <div class="header-user">
-          <span>{{ username }} ({{ roleName }})</span>
+          <span>{{ username }} ({{ roleNames }})</span>
           <el-button type="danger" size="small" @click="handleLogout">退出</el-button>
         </div>
       </el-header>
@@ -41,20 +51,33 @@ const route = useRoute();
 const userStore = useUserStore();
 
 const username = computed(() => userStore.userInfo?.username || 'Admin');
-const roleName = computed(() => userStore.userInfo?.role?.name || '');
-
-const visibleMenus = computed(() => {
-  if (userStore.isAdmin) {
-    return [
-      { name: '首页', path: '/home' },
-      { name: '用户管理', path: '/user' },
-      { name: '角色管理', path: '/role' },
-      { name: '菜单管理', path: '/menu' },
-      { name: '文件管理', path: '/file' }
-    ];
-  }
-  return userStore.menus || [];
+const roleNames = computed(() => {
+  const roles = userStore.userInfo?.roles || [];
+  return roles.map(r => r.role_name).join(', ');
 });
+
+const menus = computed(() => {
+  const rawMenus = userStore.menus || [];
+  return buildMenuTree(rawMenus);
+});
+
+const activeMenu = computed(() => route.path);
+
+const buildMenuTree = (list) => {
+  const map = {};
+  const roots = [];
+  list.forEach(item => {
+    map[item.id] = { ...item, children: [] };
+  });
+  list.forEach(item => {
+    if (item.parent_id === 0) {
+      roots.push(map[item.id]);
+    } else if (map[item.parent_id]) {
+      map[item.parent_id].children.push(map[item.id]);
+    }
+  });
+  return roots;
+};
 
 const handleLogout = () => {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {

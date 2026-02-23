@@ -17,10 +17,10 @@
             {{ row.email || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="role_id" label="角色">
+        <el-table-column label="角色">
           <template #default="{ row }">
-            <el-tag :type="row.role_id === 1 ? 'danger' : 'primary'">
-              {{ row.role_id === 1 ? '管理员' : '普通用户' }}
+            <el-tag v-for="r in row.roles" :key="r.id" style="margin-right: 5px">
+              {{ r.role_name }}
             </el-tag>
           </template>
         </el-table-column>
@@ -58,10 +58,9 @@
         <el-form-item label="密码" :prop="isEdit ? '' : 'password'">
           <el-input v-model="form.password" type="password" show-password :placeholder="isEdit ? '留空则不修改' : '请输入密码'" />
         </el-form-item>
-        <el-form-item label="角色" prop="role_id">
-          <el-select v-model="form.role_id">
-            <el-option :value="1" label="管理员" />
-            <el-option :value="2" label="普通用户" />
+        <el-form-item label="角色" prop="role_ids">
+          <el-select v-model="form.role_ids" multiple placeholder="请选择角色">
+            <el-option v-for="r in allRoles" :key="r.id" :value="r.id" :label="r.role_name" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
@@ -81,10 +80,11 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { user } from '../api';
+import { user, role } from '../api';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 const users = ref([]);
+const allRoles = ref([]);
 const dialogVisible = ref(false);
 const isEdit = ref(false);
 const loading = ref(false);
@@ -96,7 +96,7 @@ const form = reactive({
   nickname: '',
   email: '',
   password: '',
-  role_id: 2,
+  role_ids: [],
   status: 1
 });
 
@@ -119,6 +119,13 @@ const loadUsers = async () => {
   }
 };
 
+const loadRoles = async () => {
+  const res = await role.getRoles();
+  if (res.code === 200) {
+    allRoles.value = res.data || [];
+  }
+};
+
 const openDialog = (row = null) => {
   if (row) {
     isEdit.value = true;
@@ -127,7 +134,7 @@ const openDialog = (row = null) => {
     form.nickname = row.nickname;
     form.email = row.email || '';
     form.password = '';
-    form.role_id = row.role_id;
+    form.role_ids = row.roles ? row.roles.map(r => r.id) : [];
     form.status = row.status;
   } else {
     isEdit.value = false;
@@ -178,12 +185,13 @@ const resetForm = () => {
   form.nickname = '';
   form.email = '';
   form.password = '';
-  form.role_id = 2;
+  form.role_ids = [];
   form.status = 1;
 };
 
 onMounted(() => {
   loadUsers();
+  loadRoles();
 });
 </script>
 

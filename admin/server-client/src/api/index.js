@@ -62,16 +62,16 @@ export const role = {
   updateRole: (id, data) => api.put(`/roles/${id}`, data),
   deleteRole: (id) => api.delete(`/roles/${id}`),
   getRolePermissions: (id) => api.get(`/roles/${id}/permissions`),
-  assignPermissions: (id, menu_ids) => api.post(`/roles/${id}/permissions`, { menu_ids })
+  assignPermissions: (id, permission_ids) => api.post(`/roles/${id}/permissions`, { permission_ids })
 };
 
-export const menu = {
-  getMenus: () => api.get('/menus'),
-  getMenuTree: () => api.get('/menus/tree'),
-  getMenu: (id) => api.get(`/menus/${id}`),
-  createMenu: (data) => api.post('/menus', data),
-  updateMenu: (id, data) => api.put(`/menus/${id}`, data),
-  deleteMenu: (id) => api.delete(`/menus/${id}`)
+export const permission = {
+  getPermissions: () => api.get('/permissions'),
+  getPermissionTree: () => api.get('/permissions/tree'),
+  getPermission: (id) => api.get(`/permissions/${id}`),
+  createPermission: (data) => api.post('/permissions', data),
+  updatePermission: (id, data) => api.put(`/permissions/${id}`, data),
+  deletePermission: (id) => api.delete(`/permissions/${id}`)
 };
 
 export default api;

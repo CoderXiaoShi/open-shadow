@@ -1,4 +1,5 @@
 <template>
+  <h1>Open Shadow Admin</h1>
   <router-view />
 </template>
 

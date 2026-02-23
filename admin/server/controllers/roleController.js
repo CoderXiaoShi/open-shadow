@@ -1,17 +1,13 @@
 const Role = require('../models/role');
-const Permission = require('../models/permission');
-const Menu = require('../models/menu');
+const Permission = require('../models/sysPermission');
+const RolePermission = require('../models/rolePermission');
 const { logger, errorLogger } = require('../utils/logger');
 
 const roleController = {
   async getRoles(ctx) {
     try {
       const roles = await Role.findAll({
-        include: [{
-          model: Permission,
-          as: 'permissions',
-          include: [{ model: Menu, as: 'menu', attributes: ['id', 'name'] }]
-        }]
+        order: [['id', 'ASC']]
       });
 
       ctx.body = {
@@ -32,12 +28,7 @@ const roleController = {
   async getRole(ctx) {
     try {
       const { id } = ctx.params;
-      const role = await Role.findByPk(id, {
-        include: [{
-          model: Permission,
-          as: 'permissions'
-        }]
-      });
+      const role = await Role.findByPk(id);
 
       if (!role) {
         ctx.status = 404;
@@ -65,19 +56,19 @@ const roleController = {
 
   async createRole(ctx) {
     try {
-      const { name, description, status } = ctx.request.body;
+      const { role_name, role_code, description, status } = ctx.request.body;
 
-      const existingRole = await Role.findOne({ where: { name } });
+      const existingRole = await Role.findOne({ where: { role_code } });
       if (existingRole) {
         ctx.status = 400;
         ctx.body = {
           code: 400,
-          message: '角色名称已存在'
+          message: '角色编码已存在'
         };
         return;
       }
 
-      const role = await Role.create({ name, description, status });
+      const role = await Role.create({ role_name, role_code, description, status });
 
       ctx.body = {
         code: 200,
@@ -97,7 +88,7 @@ const roleController = {
   async updateRole(ctx) {
     try {
       const { id } = ctx.params;
-      const { name, description, status } = ctx.request.body;
+      const { role_name, role_code, description, status } = ctx.request.body;
 
       const role = await Role.findByPk(id);
       if (!role) {
@@ -109,7 +100,7 @@ const roleController = {
         return;
       }
 
-      await role.update({ name, description, status });
+      await role.update({ role_name, role_code, description, status });
 
       ctx.body = {
         code: 200,
@@ -149,7 +140,7 @@ const roleController = {
         return;
       }
 
-      await Permission.destroy({ where: { role_id: id } });
+      await RolePermission.destroy({ where: { role_id: id } });
       await role.destroy();
 
       ctx.body = {
@@ -166,10 +157,33 @@ const roleController = {
     }
   },
 
+  async getRolePermissions(ctx) {
+    try {
+      const { id } = ctx.params;
+
+      const rolePermissions = await RolePermission.findAll({
+        where: { role_id: id }
+      });
+
+      ctx.body = {
+        code: 200,
+        message: '获取角色权限成功',
+        data: rolePermissions.map(rp => rp.permission_id)
+      };
+    } catch (error) {
+      errorLogger.error('获取角色权限失败:', error);
+      ctx.status = 500;
+      ctx.body = {
+        code: 500,
+        message: '服务器内部错误'
+      };
+    }
+  },
+
   async assignPermissions(ctx) {
     try {
       const { id } = ctx.params;
-      const { menu_ids } = ctx.request.body;
+      const { permission_ids } = ctx.request.body;
 
       const role = await Role.findByPk(id);
       if (!role) {
@@ -181,14 +195,14 @@ const roleController = {
         return;
       }
 
-      await Permission.destroy({ where: { role_id: id } });
+      await RolePermission.destroy({ where: { role_id: id } });
 
-      if (menu_ids && menu_ids.length > 0) {
-        const permissions = menu_ids.map(menu_id => ({
+      if (permission_ids && permission_ids.length > 0) {
+        const rolePermissions = permission_ids.map(permission_id => ({
           role_id: id,
-          menu_id
+          permission_id
         }));
-        await Permission.bulkCreate(permissions);
+        await RolePermission.bulkCreate(rolePermissions);
       }
 
       ctx.body = {
@@ -197,29 +211,6 @@ const roleController = {
       };
     } catch (error) {
       errorLogger.error('分配权限失败:', error);
-      ctx.status = 500;
-      ctx.body = {
-        code: 500,
-        message: '服务器内部错误'
-      };
-    }
-  },
-
-  async getRolePermissions(ctx) {
-    try {
-      const { id } = ctx.params;
-
-      const permissions = await Permission.findAll({
-        where: { role_id: id }
-      });
-
-      ctx.body = {
-        code: 200,
-        message: '获取角色权限成功',
-        data: permissions.map(p => p.menu_id)
-      };
-    } catch (error) {
-      errorLogger.error('获取角色权限失败:', error);
       ctx.status = 500;
       ctx.body = {
         code: 500,

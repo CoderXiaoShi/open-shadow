@@ -5,14 +5,16 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     token: localStorage.getItem('token') || '',
     userInfo: null,
-    menus: []
+    menus: [],
+    permissions: []
   }),
   getters: {
-    menuPermissions: (state) => {
-      return state.menus?.map(m => m.path) || [];
+    permissionCodes: (state) => {
+      return state.permissions?.map(p => p.permission_code) || [];
     },
     isAdmin: (state) => {
-      return state.userInfo?.role_id === 1;
+      const roles = state.userInfo?.roles || [];
+      return roles.some(r => r.role_code === 'admin');
     }
   },
   actions: {
@@ -31,12 +33,14 @@ export const useUserStore = defineStore('user', {
       if (res.code === 200) {
         this.userInfo = res.data;
         this.menus = res.data.menus || [];
+        this.permissions = res.data.permissions || [];
       }
     },
     logout() {
       this.token = '';
       this.userInfo = null;
       this.menus = [];
+      this.permissions = [];
       localStorage.removeItem('token');
     }
   }

@@ -2,7 +2,7 @@ const Router = require('koa-router');
 const userController = require('../controllers/userController');
 const uploadController = require('../controllers/uploadController');
 const roleController = require('../controllers/roleController');
-const menuController = require('../controllers/menuController');
+const permissionController = require('../controllers/permissionController');
 const authMiddleware = require('../middleware/auth');
 
 const router = new Router();
@@ -29,11 +29,11 @@ router.get('/api/roles/:id', roleController.getRole);
 router.get('/api/roles/:id/permissions', roleController.getRolePermissions);
 router.post('/api/roles/:id/permissions', roleController.assignPermissions);
 
-router.post('/api/menus', menuController.createMenu);
-router.put('/api/menus/:id', menuController.updateMenu);
-router.delete('/api/menus/:id', menuController.deleteMenu);
-router.get('/api/menus', menuController.getMenus);
-router.get('/api/menus/tree', menuController.getMenuTree);
-router.get('/api/menus/:id', menuController.getMenu);
+router.post('/api/permissions', permissionController.createPermission);
+router.put('/api/permissions/:id', permissionController.updatePermission);
+router.delete('/api/permissions/:id', permissionController.deletePermission);
+router.get('/api/permissions', permissionController.getPermissions);
+router.get('/api/permissions/tree', permissionController.getPermissionTree);
+router.get('/api/permissions/:id', permissionController.getPermission);
 
 module.exports = router;
