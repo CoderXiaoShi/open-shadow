@@ -145,7 +145,8 @@ const userController = {
 
         if (permissionIds.length > 0) {
           permissions = await Permission.findAll({
-            where: { id: permissionIds, status: 1 }
+            where: { id: permissionIds, status: 1 },
+            order: [['sort', 'ASC'], ['id', 'ASC']]
           });
 
           menus = permissions.filter(p => p.type === 1);

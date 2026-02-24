@@ -5,22 +5,7 @@
       <!-- Logo -->
       <div class="logo" :class="{ collapsed: isCollapsed }">
         <div class="logo-icon">
-          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="24" cy="24" rx="7" ry="10" fill="url(#lg1)"/>
-            <ellipse cx="24" cy="24" rx="3" ry="4" fill="#fff" opacity="0.9"/>
-            <path d="M10 24c0-7.7 6.3-14 14-14" stroke="url(#lg2)" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M38 24c0 7.7-6.3 14-14 14" stroke="url(#lg2)" stroke-width="1.5" stroke-linecap="round"/>
-            <defs>
-              <linearGradient id="lg1" x1="17" y1="14" x2="31" y2="34">
-                <stop offset="0%" stop-color="#c4b5fd"/>
-                <stop offset="100%" stop-color="#38bdf8"/>
-              </linearGradient>
-              <linearGradient id="lg2" x1="0" y1="0" x2="48" y2="0">
-                <stop offset="0%" stop-color="#a78bfa"/>
-                <stop offset="100%" stop-color="#38bdf8"/>
-              </linearGradient>
-            </defs>
-          </svg>
+          <img :src="icon" alt="" style="width: 100%;">
         </div>
         <span v-show="!isCollapsed" class="logo-text">智影</span>
       </div>
@@ -94,6 +79,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../stores/user';
 import { ElMessageBox } from 'element-plus';
 import NavMenuItem from '../components/NavMenuItem.vue';
+import icon from '../assets/icon.png';
 
 const router = useRouter();
 const route = useRoute();
@@ -129,6 +115,8 @@ const buildTree = (list) => {
       map[item.parent_id].children.push(map[item.id]);
     }
   });
+  const sortBySort = (arr) => arr.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+  sortBySort(roots).forEach(node => sortBySort(node.children));
   return roots;
 };
 
@@ -173,6 +161,7 @@ const handleCommand = (command) => {
   height: 60px;
   display: flex;
   align-items: center;
+  background: #334155;
   gap: 10px;
   padding: 0 18px;
   border-bottom: 1px solid rgba(255,255,255,0.06);

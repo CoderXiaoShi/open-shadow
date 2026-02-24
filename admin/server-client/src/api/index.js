@@ -79,4 +79,33 @@ export const permission = {
   deletePermission: (id) => api.delete(`/permissions/${id}`)
 };
 
+export const material = {
+  getList: (params) => api.get('/materials', { params }),
+  create:  (data)   => api.post('/materials', data),
+  update:  (id, data) => api.put(`/materials/${id}`, data),
+  delete:  (id)     => api.delete(`/materials/${id}`),
+  upload:  (formData) => api.post('/materials/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+};
+
+export const persona = {
+  get:          ()     => api.get('/persona'),
+  save:         (data) => api.put('/persona', data),
+  buildPrompt:  ()     => api.get('/persona/build-prompt'),
+  uploadAvatar: (formData) => api.post('/materials/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+};
+
+export const aiConfig = {
+  get:  ()     => api.get('/ai-config'),
+  save: (data) => api.put('/ai-config', data),
+  test: ()     => api.post('/ai-config/test')
+};
+
+export const chat = {
+  send: (data) => api.post('/chat', data)
+};
+
 export default api;

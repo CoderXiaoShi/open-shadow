@@ -13,6 +13,9 @@ require('./models/userRole');
 require('./models/sysPermission');
 require('./models/rolePermission');
 require('./models/log');
+require('./models/material');
+require('./models/persona');
+require('./models/aiConfig');
 
 const app = new Koa();
 const port = 3000;
@@ -26,6 +29,13 @@ app.use(koaBody({
   }
 }));
 
+// 静态文件：将 /uploads/* 请求映射到 uploads 目录
+app.use(async (ctx, next) => {
+  if (ctx.path.startsWith('/uploads/')) {
+    ctx.path = ctx.path.slice('/uploads'.length);
+  }
+  await next();
+});
 app.use(static(path.join(__dirname, 'uploads')));
 
 const startServer = async () => {

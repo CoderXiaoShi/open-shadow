@@ -36,7 +36,11 @@ const MENUS = [
   { permission_code: 'system:user', permission_name: '用户管理', parent_code: 'system',  path: '/system/user', component: 'User.vue',  icon: 'User',       sort: 1 },
   { permission_code: 'system:role', permission_name: '角色管理', parent_code: 'system',  path: '/system/role', component: 'Role.vue',  icon: 'UserFilled', sort: 2 },
   { permission_code: 'system:menu', permission_name: '菜单管理', parent_code: 'system',  path: '/system/menu', component: 'Menu.vue',  icon: 'Menu',       sort: 3 },
-  { permission_code: 'file',        permission_name: '文件管理', parent_code: null,      path: '/file',        component: 'File.vue',  icon: 'Folder',     sort: 3 }
+  { permission_code: 'file',        permission_name: '文件管理', parent_code: null,      path: '/file',        component: 'File.vue',  icon: 'Folder',     sort: 3 },
+  { permission_code: 'persona',     permission_name: '角色人设', parent_code: null,      path: '/persona',     component: 'Persona.vue',   icon: 'UserFilled', sort: 20 },
+  { permission_code: 'ai-config',   permission_name: 'AI配置',   parent_code: null,      path: '/ai-config',   component: 'AiConfig.vue',  icon: 'Setting',    sort: 25 },
+  { permission_code: 'material',    permission_name: '素材管理', parent_code: null,      path: '/material',    component: 'Material/index.vue', icon: 'Collection', sort: 30 },
+  { permission_code: 'model-test',  permission_name: '模型测试', parent_code: null,      path: '/model-test',  component: 'ModelTest.vue',      icon: 'ChatDotRound', sort: 35 }
 ];
 
 /**
@@ -55,7 +59,10 @@ const BUTTONS = [
   { permission_code: 'system:menu:edit',   permission_name: '编辑菜单', parent_code: 'system:menu', sort: 2 },
   { permission_code: 'system:menu:delete', permission_name: '删除菜单', parent_code: 'system:menu', sort: 3 },
   { permission_code: 'file:upload',        permission_name: '上传文件', parent_code: 'file',        sort: 1 },
-  { permission_code: 'file:delete',        permission_name: '删除文件', parent_code: 'file',        sort: 2 }
+  { permission_code: 'file:delete',        permission_name: '删除文件', parent_code: 'file',        sort: 2 },
+  { permission_code: 'material:add',    permission_name: '新增素材', parent_code: 'material', sort: 1 },
+  { permission_code: 'material:edit',   permission_name: '编辑素材', parent_code: 'material', sort: 2 },
+  { permission_code: 'material:delete', permission_name: '删除素材', parent_code: 'material', sort: 3 }
 ];
 
 /** 默认管理员账号 */
@@ -107,41 +114,49 @@ const section = (title) => console.log(`\n▸ ${title}`);
     const permMap = {};
     for (const m of MENUS) {
       const parentId = m.parent_code ? (permMap[m.parent_code]?.id ?? 0) : 0;
-      const [perm, created] = await Permission.findOrCreate({
-        where:    { permission_code: m.permission_code },
-        defaults: {
-          parent_id:       parentId,
-          permission_name: m.permission_name,
-          permission_code: m.permission_code,
-          type:            1,
-          path:            m.path    || null,
-          component:       m.component || null,
-          icon:            m.icon    || null,
-          sort:            m.sort,
-          status:          1
-        }
-      });
+      const defaults = {
+        parent_id:       parentId,
+        permission_name: m.permission_name,
+        permission_code: m.permission_code,
+        type:            1,
+        path:            m.path      || null,
+        component:       m.component || null,
+        icon:            m.icon      || null,
+        sort:            m.sort,
+        status:          1
+      };
+      let perm = await Permission.findOne({ where: { permission_code: m.permission_code } });
+      if (!perm) {
+        perm = await Permission.create(defaults);
+        log(`[${m.permission_code}] 已创建`);
+      } else {
+        await perm.update(defaults);
+        log(`[${m.permission_code}] 已更新`);
+      }
       permMap[m.permission_code] = perm;
-      log(`[${m.permission_code}] ${created ? '已创建' : '已存在，跳过'}`);
     }
 
     // ── Step 3: 按钮权限 ──────────────────────────────────
     section('初始化按钮权限');
     for (const b of BUTTONS) {
       const parentId = permMap[b.parent_code]?.id ?? 0;
-      const [perm, created] = await Permission.findOrCreate({
-        where:    { permission_code: b.permission_code },
-        defaults: {
-          parent_id:       parentId,
-          permission_name: b.permission_name,
-          permission_code: b.permission_code,
-          type:            2,
-          sort:            b.sort,
-          status:          1
-        }
-      });
+      const defaults = {
+        parent_id:       parentId,
+        permission_name: b.permission_name,
+        permission_code: b.permission_code,
+        type:            2,
+        sort:            b.sort,
+        status:          1
+      };
+      let perm = await Permission.findOne({ where: { permission_code: b.permission_code } });
+      if (!perm) {
+        perm = await Permission.create(defaults);
+        log(`[${b.permission_code}] 已创建`);
+      } else {
+        await perm.update(defaults);
+        log(`[${b.permission_code}] 已更新`);
+      }
       permMap[b.permission_code] = perm;
-      log(`[${b.permission_code}] ${created ? '已创建' : '已存在，跳过'}`);
     }
 
     // ── Step 4: 角色-权限关联 ─────────────────────────────

@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(wc:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(test:*)",
+      "Bash(cd \"D:\\\\sxl\\\\github\\\\open-shadow\\\\admin\\\\server\" && npm run init 2>&1)",
+      "Bash(cd \"D:/sxl/github/open-shadow/admin/server\" && node -e \"require\\('./models/material'\\); require\\('./controllers/materialController'\\); console.log\\('OK'\\)\" 2>&1)",
+      "Bash(tail:*)",
+      "Bash(mysql:*)",
+      "Bash(cd /d/sxl/github/open-shadow/admin/server && npm run init 2>&1)"
     ]
   }
 }

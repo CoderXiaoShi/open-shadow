@@ -37,6 +37,26 @@ const routes = [
         path: '/file',
         name: 'File',
         component: () => import('../views/File.vue')
+      },
+      {
+        path: '/persona',
+        name: 'Persona',
+        component: () => import('../views/Persona.vue')
+      },
+      {
+        path: '/ai-config',
+        name: 'AiConfig',
+        component: () => import('../views/AiConfig.vue')
+      },
+      {
+        path: '/material',
+        name: 'Material',
+        component: () => import('../views/Material/index.vue')
+      },
+      {
+        path: '/model-test',
+        name: 'ModelTest',
+        component: () => import('../views/ModelTest.vue')
       }
     ]
   }
