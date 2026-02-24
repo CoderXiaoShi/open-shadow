@@ -26,4 +26,7 @@ const UserRole = sequelize.define('UserRole', {
   ]
 });
 
+const Role = require('./role');
+UserRole.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
+
 module.exports = UserRole;

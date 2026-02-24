@@ -5,6 +5,7 @@
         <div class="card-header">
           <span>文件管理</span>
           <el-upload
+            v-if="userStore.hasPermission('file:upload')"
             :action="uploadUrl"
             :headers="uploadHeaders"
             :show-file-list="false"
@@ -31,7 +32,7 @@
         <el-table-column label="操作" width="150">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleDownload(row.filePath)">下载</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row.fileName)">删除</el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row.fileName)" v-if="userStore.hasPermission('file:delete')">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -43,6 +44,9 @@
 import { ref, onMounted } from 'vue';
 import { upload } from '../api';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useUserStore } from '../stores/user';
+
+const userStore = useUserStore();
 
 const files = ref([]);
 

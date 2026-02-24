@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { useUserStore } from '../stores/user';
 
 const routes = [
   {
@@ -44,6 +45,32 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+});
+
+router.beforeEach(async (to) => {
+  const userStore = useUserStore();
+
+  if (!userStore.token) {
+    return to.path === '/login' ? true : '/login';
+  }
+
+  if (to.path === '/login') return '/home';
+
+  if (!userStore.userInfo) {
+    try {
+      await userStore.getUserInfo();
+    } catch {
+      userStore.logout();
+      return '/login';
+    }
+  }
+
+  const allowedPaths = userStore.menus.map(m => m.path).filter(Boolean);
+  if (to.path !== '/home' && !allowedPaths.includes(to.path)) {
+    return '/home';
+  }
+
+  return true;
 });
 
 export default router;

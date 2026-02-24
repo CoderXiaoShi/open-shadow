@@ -121,7 +121,7 @@ const roleController = {
     try {
       const { id } = ctx.params;
 
-      if (id === 1) {
+      if (Number(id) === 1) {
         ctx.status = 400;
         ctx.body = {
           code: 400,

@@ -27,7 +27,6 @@ const permissionController = {
   async getPermissionTree(ctx) {
     try {
       const permissions = await Permission.findAll({
-        where: { type: 1 },
         order: [['sort', 'ASC'], ['id', 'ASC']]
       });
 

@@ -15,6 +15,9 @@ export const useUserStore = defineStore('user', {
     isAdmin: (state) => {
       const roles = state.userInfo?.roles || [];
       return roles.some(r => r.role_code === 'admin');
+    },
+    hasPermission: (state) => (code) => {
+      return state.permissions?.some(p => p.permission_code === code) ?? false;
     }
   },
   actions: {

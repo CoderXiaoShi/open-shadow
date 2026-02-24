@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>角色管理</span>
-          <el-button type="primary" @click="openDialog()">新增角色</el-button>
+          <el-button type="primary" @click="openDialog()" v-if="userStore.hasPermission('system:role:add')">新增角色</el-button>
         </div>
       </template>
 
@@ -26,9 +26,9 @@
         </el-table-column>
         <el-table-column label="操作" width="200">
           <template #default="{ row }">
-            <el-button type="warning" size="small" @click="openPermissionDialog(row)">权限</el-button>
-            <el-button type="primary" size="small" @click="openDialog(row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row.id)" :disabled="row.id === 1">删除</el-button>
+            <el-button type="warning" size="small" @click="openPermissionDialog(row)" v-if="userStore.hasPermission('system:role:assign')">权限</el-button>
+            <el-button type="primary" size="small" @click="openDialog(row)" v-if="userStore.hasPermission('system:role:edit')">编辑</el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row.id)" :disabled="row.id === 1" v-if="userStore.hasPermission('system:role:delete')">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -87,6 +87,9 @@
 import { ref, reactive, onMounted, nextTick } from 'vue';
 import { role, permission } from '../api';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useUserStore } from '../stores/user';
+
+const userStore = useUserStore();
 
 const roles = ref([]);
 const permissionTree = ref([]);
@@ -196,6 +199,11 @@ const handleDelete = (id) => {
 
 const openPermissionDialog = async (row) => {
   currentRole.value = row;
+  checkedPermissions.value = [];
+
+  // 先清空 tree 的勾选状态，避免上一次数据残留
+  treeRef.value?.setCheckedKeys([]);
+
   try {
     const res = await role.getRolePermissions(row.id);
     if (res.code === 200) {
@@ -204,7 +212,12 @@ const openPermissionDialog = async (row) => {
   } catch (e) {
     checkedPermissions.value = [];
   }
+
   permissionDialogVisible.value = true;
+
+  // default-checked-keys 只在初次挂载生效，需手动同步
+  await nextTick();
+  treeRef.value?.setCheckedKeys(checkedPermissions.value);
 };
 
 const savePermissions = async () => {

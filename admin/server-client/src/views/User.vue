@@ -4,11 +4,11 @@
       <template #header>
         <div class="card-header">
           <span>用户管理</span>
-          <el-button type="primary" @click="openDialog()">新增用户</el-button>
+          <el-button type="primary" @click="openDialog()" v-if="userStore.hasPermission('system:user:add')">新增用户</el-button>
         </div>
       </template>
 
-      <el-table :data="users" stripe>
+      <el-table :data="users" stripe v-loading="tableLoading">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" />
         <el-table-column prop="nickname" label="昵称" />
@@ -33,11 +33,24 @@
         </el-table-column>
         <el-table-column label="操作" width="180">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="openDialog(row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="primary" size="small" @click="openDialog(row)" v-if="userStore.hasPermission('system:user:edit')">编辑</el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row.id)" v-if="userStore.hasPermission('system:user:delete')">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrap">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @current-change="loadUsers"
+          @size-change="handleSizeChange"
+        />
+      </div>
     </el-card>
 
     <el-dialog
@@ -82,13 +95,20 @@
 import { ref, reactive, onMounted } from 'vue';
 import { user, role } from '../api';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useUserStore } from '../stores/user';
 
-const users = ref([]);
-const allRoles = ref([]);
+const userStore = useUserStore();
+
+const users       = ref([]);
+const allRoles    = ref([]);
+const total       = ref(0);
+const page        = ref(1);
+const pageSize    = ref(20);
+const tableLoading = ref(false);
 const dialogVisible = ref(false);
-const isEdit = ref(false);
-const loading = ref(false);
-const formRef = ref(null);
+const isEdit      = ref(false);
+const loading     = ref(false);
+const formRef     = ref(null);
 
 const form = reactive({
   id: null,
@@ -101,22 +121,31 @@ const form = reactive({
 });
 
 const rules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
-  ],
-  nickname: [
-    { required: true, message: '请输入昵称', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }
-  ]
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  nickname: [{ required: true, message: '请输入昵称',   trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码',   trigger: 'blur' }]
 };
 
 const loadUsers = async () => {
-  const res = await user.getUsers();
-  if (res.code === 200) {
-    users.value = res.data || [];
+  tableLoading.value = true;
+  try {
+    const res = await user.getUsers({ page: page.value, pageSize: pageSize.value });
+    if (res.code === 200) {
+      users.value = res.data.list  || [];
+      total.value = res.data.total || 0;
+    } else {
+      ElMessage.error(res.message || '加载失败');
+    }
+  } catch (e) {
+    ElMessage.error(e.message || '加载失败');
+  } finally {
+    tableLoading.value = false;
   }
+};
+
+const handleSizeChange = () => {
+  page.value = 1;
+  loadUsers();
 };
 
 const loadRoles = async () => {
@@ -129,13 +158,13 @@ const loadRoles = async () => {
 const openDialog = (row = null) => {
   if (row) {
     isEdit.value = true;
-    form.id = row.id;
+    form.id       = row.id;
     form.username = row.username;
     form.nickname = row.nickname;
-    form.email = row.email || '';
+    form.email    = row.email || '';
     form.password = '';
     form.role_ids = row.roles ? row.roles.map(r => r.id) : [];
-    form.status = row.status;
+    form.status   = row.status;
   } else {
     isEdit.value = false;
     resetForm();
@@ -145,7 +174,6 @@ const openDialog = (row = null) => {
 
 const handleSubmit = async () => {
   if (!formRef.value) return;
-
   await formRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true;
@@ -166,12 +194,16 @@ const handleSubmit = async () => {
 const handleDelete = (id) => {
   ElMessageBox.confirm('确定要删除该用户吗？', '提示', {
     confirmButtonText: '确定',
-    cancelButtonText: '取消',
+    cancelButtonText:  '取消',
     type: 'warning'
   }).then(async () => {
     try {
       await user.deleteUser(id);
       ElMessage.success('删除成功');
+      // 若当前页删空了，退回上一页
+      if (users.value.length === 1 && page.value > 1) {
+        page.value--;
+      }
       loadUsers();
     } catch (e) {
       ElMessage.error(e.message);
@@ -180,13 +212,13 @@ const handleDelete = (id) => {
 };
 
 const resetForm = () => {
-  form.id = null;
+  form.id       = null;
   form.username = '';
   form.nickname = '';
-  form.email = '';
+  form.email    = '';
   form.password = '';
   form.role_ids = [];
-  form.status = 1;
+  form.status   = 1;
 };
 
 onMounted(() => {
@@ -200,5 +232,10 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

@@ -174,13 +174,19 @@ const userController = {
 
   async getUsers(ctx) {
     try {
-      const users = await User.findAll({
-        attributes: ['id', 'username', 'nickname', 'email', 'status', 'createdAt'],
-        order: [['id', 'ASC']]
+      const page     = Math.max(1, parseInt(ctx.query.page)     || 1);
+      const pageSize = Math.min(100, Math.max(1, parseInt(ctx.query.pageSize) || 20));
+      const offset   = (page - 1) * pageSize;
+
+      const { count, rows } = await User.findAndCountAll({
+        attributes: ['id', 'username', 'nickname', 'email', 'status'],
+        order: [['id', 'ASC']],
+        limit: pageSize,
+        offset
       });
 
       const userList = [];
-      for (const user of users) {
+      for (const user of rows) {
         const userRoles = await UserRole.findAll({
           where: { user_id: user.id },
           include: [{ model: Role, as: 'role' }]
@@ -195,7 +201,12 @@ const userController = {
       ctx.body = {
         code: 200,
         message: '获取用户列表成功',
-        data: userList
+        data: {
+          list:     userList,
+          total:    count,
+          page,
+          pageSize
+        }
       };
     } catch (error) {
       errorLogger.error('获取用户列表失败:', error);

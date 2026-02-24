@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>权限管理</span>
-          <el-button type="primary" @click="openDialog()">新增权限</el-button>
+          <el-button type="primary" @click="openDialog()" v-if="userStore.hasPermission('system:menu:add')">新增权限</el-button>
         </div>
       </template>
 
@@ -31,8 +31,8 @@
         </el-table-column>
         <el-table-column label="操作" width="150">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="openDialog(row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-button type="primary" size="small" @click="openDialog(row)" v-if="userStore.hasPermission('system:menu:edit')">编辑</el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row.id)" v-if="userStore.hasPermission('system:menu:delete')">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -93,8 +93,11 @@
 import { ref, reactive, onMounted, computed } from 'vue';
 import { permission } from '../api';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useUserStore } from '../stores/user';
 
-const permissions = ref [];
+const userStore = useUserStore();
+
+const permissions = ref([]);
 const dialogVisible = ref(false);
 const isEdit = ref(false);
 const loading = ref(false);

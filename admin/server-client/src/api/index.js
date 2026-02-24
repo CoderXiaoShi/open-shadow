@@ -21,7 +21,9 @@ api.interceptors.response.use(
     const res = response.data;
     if (res.code === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
       return Promise.reject(new Error(res.message || '未授权'));
     }
     return res;
@@ -29,9 +31,12 @@ api.interceptors.response.use(
   error => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
-    return Promise.reject(error);
+    const message = error.response?.data?.message || error.message || '请求失败';
+    return Promise.reject(new Error(message));
   }
 );
 
@@ -42,7 +47,7 @@ export const auth = {
 };
 
 export const user = {
-  getUsers: () => api.get('/users'),
+  getUsers: (params) => api.get('/users', { params }),
   updateUser: (data) => api.post('/users', data),
   deleteUser: (id) => api.delete(`/users/${id}`)
 };
