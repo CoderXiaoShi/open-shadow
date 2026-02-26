@@ -58,8 +58,8 @@ router.get('/api/ai-config',       aiConfigController.get);
 router.put('/api/ai-config',       aiConfigController.save);
 router.post('/api/ai-config/test', aiConfigController.test);
 
-// ── 模型测试 ─────────────────────────────────────────────────
-router.post('/api/chat', chatController.chat);
+// ── 模型测试（SSE 流式） ──────────────────────────────────────
+router.post('/api/chat', chatController.chatStream);
 
 module.exports = router;
 

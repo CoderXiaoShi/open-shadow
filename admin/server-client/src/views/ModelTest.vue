@@ -45,7 +45,7 @@
       <!-- 消息列表 -->
       <div class="messages" ref="messagesEl">
         <div v-if="messages.length === 0" class="empty-chat">
-          <p>选择参考素材，输入消息，测试模型输出效果</p>
+          选择参考素材，输入消息，测试模型输出效果
         </div>
         <div
           v-for="(msg, idx) in messages"
@@ -55,15 +55,7 @@
         >
           <div class="bubble">
             <div class="bubble-role">{{ msg.role === 'user' ? '我' : '模型' }}</div>
-            <div class="bubble-content">{{ msg.content }}</div>
-          </div>
-        </div>
-        <div v-if="loading" class="message-row assistant">
-          <div class="bubble">
-            <div class="bubble-role">模型</div>
-            <div class="bubble-content typing">
-              <span></span><span></span><span></span>
-            </div>
+            <div class="bubble-content">{{ msg.content }}<span v-if="msg.streaming" class="cursor">|</span></div>
           </div>
         </div>
       </div>
@@ -86,7 +78,6 @@
       </div>
 
     </div>
-
   </div>
 </template>
 
@@ -94,14 +85,14 @@
 import { ref, onMounted, nextTick } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Select } from '@element-plus/icons-vue';
-import { material as materialApi, persona as personaApi, chat as chatApi } from '../api/index.js';
+import { material as materialApi, persona as personaApi } from '../api/index.js';
 
 // ── 素材侧边栏 ────────────────────────────────────────────
 const keyword     = ref('');
 const materials   = ref([]);
 const selectedIds = ref([]);
 
-const typeLabel = (t) => ({ text: '文本', image: '图片', video: '视频', document: '文档' }[t] || t);
+const typeLabel   = (t) => ({ text: '文本', image: '图片', video: '视频', document: '文档' }[t] || t);
 const typeTagType = (t) => ({ text: '', image: 'success', video: 'warning', document: 'info' }[t] || '');
 
 const fetchMaterials = async () => {
@@ -131,7 +122,7 @@ const loadPersona = async () => {
 };
 
 // ── 对话 ─────────────────────────────────────────────────
-const messages   = ref([]);   // [{role:'user'|'assistant', content:''}]
+const messages   = ref([]);   // [{role, content, streaming?}]
 const inputText  = ref('');
 const loading    = ref(false);
 const messagesEl = ref(null);
@@ -145,31 +136,87 @@ const scrollBottom = async () => {
 
 const handleSend = async () => {
   const text = inputText.value.trim();
-  if (!text) return;
-  if (loading.value) return;
+  if (!text || loading.value) return;
 
+  // 推入用户消息 + 占位助手消息
   messages.value.push({ role: 'user', content: text });
+  messages.value.push({ role: 'assistant', content: '', streaming: true });
   inputText.value = '';
-  loading.value = true;
+  loading.value   = true;
   await scrollBottom();
 
-  try {
-    // 构建历史（不含最新那条 user，它通过 message 字段传）
-    const history = messages.value.slice(0, -1).map(({ role, content }) => ({ role, content }));
+  // 历史不含最后两条（刚推入的）
+  const history = messages.value.slice(0, -2).map(({ role, content }) => ({ role, content }));
 
-    const res = await chatApi.send({
-      message:      text,
-      material_ids: selectedIds.value,
-      history
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/chat', {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        message:      text,
+        material_ids: selectedIds.value,
+        history
+      })
     });
 
-    if (res.code !== 200) throw new Error(res.message || '调用失败');
+    if (!response.ok) {
+      const json = await response.json().catch(() => ({}));
+      throw new Error(json.message || `HTTP ${response.status}`);
+    }
 
-    messages.value.push({ role: 'assistant', content: res.data.reply });
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let   buf     = '';
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop(); // 保留未完整行
+
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const raw = line.slice(5).trim();
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.type === 'delta') {
+            const last = messages.value[messages.value.length - 1];
+            last.content += parsed.text;
+            await scrollBottom();
+          } else if (parsed.type === 'error') {
+            throw new Error(parsed.message || '模型返回错误');
+          }
+          // type === 'done' 直接忽略，while 循环结束后统一收尾
+        } catch (parseErr) {
+          // JSON 解析失败 = 非 JSON 行，跳过
+          if (!(parseErr instanceof SyntaxError)) throw parseErr;
+        }
+      }
+    }
+
+    // 流结束，移除打字游标
+    const last = messages.value[messages.value.length - 1];
+    if (last?.role === 'assistant') last.streaming = false;
+
   } catch (e) {
     ElMessage.error(e.message || '请求失败');
-    // 移除刚推入的 user 消息，方便重试
-    messages.value.pop();
+    // 移除占位助手消息；若助手消息已有内容则保留（仅标记非流）
+    const last = messages.value[messages.value.length - 1];
+    if (last?.role === 'assistant') {
+      if (!last.content) {
+        messages.value.pop();  // 空消息 → 连同用户消息一起移除
+        messages.value.pop();
+      } else {
+        last.streaming = false;
+      }
+    }
   } finally {
     loading.value = false;
     await scrollBottom();
@@ -191,9 +238,9 @@ onMounted(() => {
 .model-test-page {
   display: flex;
   height: calc(100vh - 120px);
-  gap: 0;
   padding: 16px;
   box-sizing: border-box;
+  gap: 12px;
 }
 
 /* ── 左侧边栏 ─────────────────────────────────────── */
@@ -205,7 +252,6 @@ onMounted(() => {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 12px;
-  margin-right: 12px;
   background: #fff;
   overflow: hidden;
 }
@@ -230,7 +276,7 @@ onMounted(() => {
   color: #475569;
   transition: background .15s;
 }
-.material-item:hover { background: #f1f5f9; }
+.material-item:hover    { background: #f1f5f9; }
 .material-item.selected { background: #eff6ff; color: #1d4ed8; }
 .material-title {
   flex: 1;
@@ -238,8 +284,8 @@ onMounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.check-icon { color: #2563eb; font-size: 14px; flex-shrink: 0; }
-.empty-hint { color: #94a3b8; font-size: 13px; text-align: center; padding: 20px 0; }
+.check-icon  { color: #2563eb; font-size: 14px; flex-shrink: 0; }
+.empty-hint  { color: #94a3b8; font-size: 13px; text-align: center; padding: 20px 0; }
 .sidebar-footer {
   font-size: 12px;
   color: #64748b;
@@ -260,12 +306,10 @@ onMounted(() => {
   border-radius: 8px;
   background: #fff;
   overflow: hidden;
+  min-width: 0;
 }
 
-.info-collapse {
-  border-bottom: 1px solid #f1f5f9;
-  flex-shrink: 0;
-}
+.info-collapse { flex-shrink: 0; border-bottom: 1px solid #f1f5f9; }
 .prompt-preview {
   margin: 0;
   font-family: monospace;
@@ -281,29 +325,23 @@ onMounted(() => {
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 .empty-chat {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: #94a3b8;
   font-size: 14px;
+  text-align: center;
+  margin: auto;
 }
 
-.message-row {
-  display: flex;
-}
+.message-row          { display: flex; }
 .message-row.user     { justify-content: flex-end; }
 .message-row.assistant { justify-content: flex-start; }
 
-.bubble {
-  max-width: 72%;
-}
+.bubble { max-width: 75%; }
 .bubble-role {
   font-size: 11px;
   color: #94a3b8;
@@ -315,7 +353,7 @@ onMounted(() => {
   padding: 10px 14px;
   border-radius: 12px;
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -330,24 +368,16 @@ onMounted(() => {
   border-bottom-left-radius: 4px;
 }
 
-/* 打字动画 */
-.typing {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 14px !important;
+/* 打字游标闪烁 */
+.cursor {
+  display: inline-block;
+  margin-left: 1px;
+  color: #94a3b8;
+  animation: blink-cursor .7s step-end infinite;
 }
-.typing span {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #94a3b8;
-  animation: blink 1.2s infinite;
-}
-.typing span:nth-child(2) { animation-delay: .2s; }
-.typing span:nth-child(3) { animation-delay: .4s; }
-@keyframes blink {
-  0%, 80%, 100% { opacity: 0.2; transform: scale(.8); }
-  40% { opacity: 1; transform: scale(1); }
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
 /* 输入区 */
