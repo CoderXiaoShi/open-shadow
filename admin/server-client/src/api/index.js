@@ -108,4 +108,10 @@ export const chat = {
   send: (data) => api.post('/chat', data)
 };
 
+export const aiAgent = {
+  get:   ()     => api.get('/ai-agent'),
+  save:  (data) => api.put('/ai-agent', data)
+  // build 走原生 fetch SSE，不在这里定义
+};
+
 export default api;

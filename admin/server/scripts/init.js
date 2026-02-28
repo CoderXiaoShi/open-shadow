@@ -40,7 +40,8 @@ const MENUS = [
   { permission_code: 'persona',     permission_name: '角色人设', parent_code: null,      path: '/persona',     component: 'Persona.vue',   icon: 'UserFilled', sort: 20 },
   { permission_code: 'ai-config',   permission_name: 'AI配置',   parent_code: null,      path: '/ai-config',   component: 'AiConfig.vue',  icon: 'Setting',    sort: 25 },
   { permission_code: 'material',    permission_name: '素材管理', parent_code: null,      path: '/material',    component: 'Material/index.vue', icon: 'Collection', sort: 30 },
-  { permission_code: 'model-test',  permission_name: '模型测试', parent_code: null,      path: '/model-test',  component: 'ModelTest.vue',      icon: 'ChatDotRound', sort: 35 }
+  { permission_code: 'model-test',  permission_name: '模型测试', parent_code: null,      path: '/model-test',  component: 'ModelTest.vue',      icon: 'ChatDotRound', sort: 35 },
+  { permission_code: 'ai-agent',    permission_name: 'AI角色构建', parent_code: null,    path: '/ai-agent',    component: 'AiAgent.vue',        icon: 'MagicStick',   sort: 40 }
 ];
 
 /**

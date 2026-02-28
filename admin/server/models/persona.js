@@ -41,6 +41,10 @@ const Persona = sequelize.define('Persona', {
   system_prompt: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  role_definition: {
+    type: DataTypes.TEXT('long'),
+    allowNull: true
   }
 }, {
   tableName: 'persona',

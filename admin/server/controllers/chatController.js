@@ -5,7 +5,7 @@ const chatService = require('../services/chatService');
 const chatController = {
   /** 流式对话（SSE） */
   async chatStream(ctx) {
-    const { message, material_ids = [], history = [] } = ctx.request.body;
+    const { message, history = [] } = ctx.request.body;
 
     if (!message || !message.trim()) {
       ctx.body = { code: 400, message: '消息不能为空' };
@@ -36,8 +36,7 @@ const chatController = {
 
     try {
       const { stream, provider } = await chatService.chatStream({
-        message:      message.trim(),
-        material_ids,
+        message: message.trim(),
         history
       });
       llmStream = stream;

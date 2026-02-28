@@ -101,8 +101,13 @@ const currentMenu = computed(() => {
   return matched?.permission_name || '';
 });
 
+// 暂时隐藏的页面路径（从侧边栏不显示，但路由仍可访问）
+const HIDDEN_PATHS = ['/material', '/file'];
+
 // 将后端返回的扁平菜单列表构建成树
-const menuTree = computed(() => buildTree(userStore.menus || []));
+const menuTree = computed(() => buildTree(
+  (userStore.menus || []).filter(m => !HIDDEN_PATHS.includes(m.path))
+));
 
 const buildTree = (list) => {
   const map = {};

@@ -18,7 +18,7 @@ const personaService = {
       where: { id: SINGLETON_ID },
       defaults: { id: SINGLETON_ID }
     });
-    const fields = ['name', 'avatar_url', 'bio', 'personality', 'speech_style', 'background', 'example_qa', 'system_prompt'];
+    const fields = ['name', 'avatar_url', 'bio', 'personality', 'speech_style', 'background', 'example_qa', 'system_prompt', 'role_definition'];
     const updates = {};
     for (const f of fields) {
       if (data[f] !== undefined) updates[f] = data[f];

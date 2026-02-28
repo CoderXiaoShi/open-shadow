@@ -7,6 +7,7 @@ const materialController = require('../controllers/materialController');
 const personaController  = require('../controllers/personaController');
 const aiConfigController = require('../controllers/aiConfigController');
 const chatController     = require('../controllers/chatController');
+const aiAgentController  = require('../controllers/aiAgentController');
 const authMiddleware = require('../middleware/auth');
 const { checkPermission } = require('../middleware/permission');
 
@@ -60,6 +61,19 @@ router.post('/api/ai-config/test', aiConfigController.test);
 
 // ── 模型测试（SSE 流式） ──────────────────────────────────────
 router.post('/api/chat', chatController.chatStream);
+
+// 调试：确认当前系统提示词内容
+router.get('/api/chat/system-prompt', async (ctx) => {
+  const personaService = require('../services/personaService');
+  const p = await personaService.get();
+  const sp = p.role_definition || p.system_prompt || '';
+  ctx.body = { code: 200, data: { length: sp.length, preview: sp.slice(0, 200) } };
+});
+
+// ── AI 角色构建 ───────────────────────────────────────────────
+router.post('/api/ai-agent/build', aiAgentController.build);
+router.get('/api/ai-agent',        aiAgentController.get);
+router.put('/api/ai-agent',        aiAgentController.save);
 
 module.exports = router;
 

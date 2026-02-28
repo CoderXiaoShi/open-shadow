@@ -57,6 +57,11 @@ const routes = [
         path: '/model-test',
         name: 'ModelTest',
         component: () => import('../views/ModelTest.vue')
+      },
+      {
+        path: '/ai-agent',
+        name: 'AiAgent',
+        component: () => import('../views/AiAgent.vue')
       }
     ]
   }
