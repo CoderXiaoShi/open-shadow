@@ -77,3 +77,13 @@ export default {
 
 - [C/C++ addons, Node.js modules - Pre-Bundling](https://github.com/electron-vite/vite-plugin-electron-renderer#dependency-pre-bundling)
 - [dependencies vs devDependencies](https://github.com/electron-vite/vite-plugin-electron-renderer#dependencies-vs-devdependencies)
+
+
+需要对接5个接口
+1. 静默注册
+2. 登录
+3. 聊天记录列表
+4. 对话
+5. 添加聊天记录, 每次对话后都要加入聊天记录
+
+

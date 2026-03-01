@@ -1,8 +1,14 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
+
+declare module 'electron' {
+  interface App {
+    isQuitting: boolean
+  }
+}
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -39,6 +45,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let win: BrowserWindow | null = null
+let tray: Tray | null = null
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
@@ -46,6 +53,11 @@ async function createWindow() {
   win = new BrowserWindow({
     title: 'Main window',
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
+    width: 200,
+    height: 200,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
     webPreferences: {
       preload,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
@@ -76,13 +88,54 @@ async function createWindow() {
     return { action: 'deny' }
   })
   // win.webContents.on('will-navigate', (event, url) => { }) #344
+
+  // 关闭窗口时隐藏到托盘，而非退出
+  win.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault()
+      win?.hide()
+    }
+  })
 }
 
-app.whenReady().then(createWindow)
+function createTray() {
+  const iconPath = path.join(process.env.VITE_PUBLIC, 'logo.svg')
+  const icon = nativeImage.createFromPath(iconPath)
+  tray = new Tray(icon)
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '退出',
+      click: () => {
+        app.isQuitting = true
+        app.quit()
+      },
+    },
+  ])
+
+  tray.setToolTip('智影')
+  tray.setContextMenu(contextMenu)
+
+  // 双击托盘图标显示/恢复窗口
+  tray.on('double-click', () => {
+    if (win) {
+      if (win.isVisible()) {
+        win.focus()
+      } else {
+        win.show()
+      }
+    }
+  })
+}
+
+app.whenReady().then(() => {
+  createWindow()
+  createTray()
+})
 
 app.on('window-all-closed', () => {
   win = null
-  if (process.platform !== 'darwin') app.quit()
+  // 使用托盘时，不在所有窗口关闭时退出
 })
 
 app.on('second-instance', () => {
