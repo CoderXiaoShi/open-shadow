@@ -91,7 +91,7 @@ async function fetchPageContent(url, onProgress) {
 
     return { text: text.slice(0, MAX_TEXT_LEN), screenshotUrl, avatarUrl };
   } finally {
-    await page.close();
+    // await page.close();
     // 将来可以优化成, 保留最近10个
     // await browser.close();
   }
