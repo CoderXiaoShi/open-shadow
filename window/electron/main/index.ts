@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, screen } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -13,16 +13,6 @@ declare module 'electron' {
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// The built directory structure
-//
-// ├─┬ dist-electron
-// │ ├─┬ main
-// │ │ └── index.js    > Electron-Main
-// │ └─┬ preload
-// │   └── index.mjs   > Preload-Scripts
-// ├─┬ dist
-// │ └── index.html    > Electron-Renderer
-//
 process.env.APP_ROOT = path.join(__dirname, '../..')
 
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
@@ -45,49 +35,49 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let win: BrowserWindow | null = null
+let chatWin: BrowserWindow | null = null
 let tray: Tray | null = null
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
 async function createWindow() {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize
+  const winSize = 100
+  const margin  = 100
+
   win = new BrowserWindow({
     title: 'Main window',
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
-    width: 200,
-    height: 200,
+    width: winSize,
+    height: winSize,
+    x: width  - winSize - margin,
+    y: height - winSize - margin,
     frame: false,
-    alwaysOnTop: true,
+    resizable: false,
+    alwaysOnTop: false,
     skipTaskbar: true,
+    transparent: true,
     webPreferences: {
       preload,
-      // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
-      // nodeIntegration: true,
-
-      // Consider using contextBridge.exposeInMainWorld
-      // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-      // contextIsolation: false,
+      webSecurity: false,
     },
   })
 
-  if (VITE_DEV_SERVER_URL) { // #298
+  if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
-    // Open devTool if the app is not packaged
     win.webContents.openDevTools()
   } else {
     win.loadFile(indexHtml)
   }
 
-  // Test actively push message to the Electron-Renderer
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', new Date().toLocaleString())
   })
 
-  // Make all links open with the browser, not with the application
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:')) shell.openExternal(url)
     return { action: 'deny' }
   })
-  // win.webContents.on('will-navigate', (event, url) => { }) #344
 
   // 关闭窗口时隐藏到托盘，而非退出
   win.on('close', (event) => {
@@ -99,7 +89,7 @@ async function createWindow() {
 }
 
 function createTray() {
-  const iconPath = path.join(process.env.VITE_PUBLIC, 'logo.svg')
+  const iconPath = path.join(process.env.VITE_PUBLIC, 'img.png')
   const icon = nativeImage.createFromPath(iconPath)
   tray = new Tray(icon)
 
@@ -116,14 +106,9 @@ function createTray() {
   tray.setToolTip('智影')
   tray.setContextMenu(contextMenu)
 
-  // 双击托盘图标显示/恢复窗口
   tray.on('double-click', () => {
     if (win) {
-      if (win.isVisible()) {
-        win.focus()
-      } else {
-        win.show()
-      }
+      win.isVisible() ? win.focus() : win.show()
     }
   })
 }
@@ -133,6 +118,59 @@ app.whenReady().then(() => {
   createTray()
 })
 
+// 打开聊天弹窗，定位在头像窗口左侧
+ipcMain.on('open-chat-window', () => {
+  if (!win) return
+
+  // 已打开则聚焦
+  if (chatWin && !chatWin.isDestroyed()) {
+    chatWin.focus()
+    return
+  }
+
+  const [x, y] = win.getPosition()
+  const chatWidth  = 360
+  const chatHeight = 520
+  const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
+
+  const chatX = x - chatWidth - 8
+  const chatY = Math.min(y, sh - chatHeight - 15)
+
+  chatWin = new BrowserWindow({
+    width: chatWidth,
+    height: chatHeight,
+    x: chatX,
+    y: chatY,
+    frame: false,
+    resizable: false,
+    alwaysOnTop: false,
+    skipTaskbar: true,
+    transparent: false,
+    backgroundColor: '#ffffff',
+    webPreferences: {
+      preload,
+      webSecurity: false,
+    },
+  })
+
+  if (VITE_DEV_SERVER_URL) {
+    chatWin.loadURL(`${VITE_DEV_SERVER_URL}#chat`)
+  } else {
+    chatWin.loadFile(indexHtml, { hash: 'chat' })
+  }
+  
+  chatWin.webContents.openDevTools()
+  chatWin.on('closed', () => {
+    chatWin = null
+  })
+})
+
+ipcMain.on('close-chat-window', () => {
+  if (chatWin && !chatWin.isDestroyed()) {
+    chatWin.close()
+  }
+})
+
 app.on('window-all-closed', () => {
   win = null
   // 使用托盘时，不在所有窗口关闭时退出
@@ -140,7 +178,6 @@ app.on('window-all-closed', () => {
 
 app.on('second-instance', () => {
   if (win) {
-    // Focus on the main window if the user tried to open another
     if (win.isMinimized()) win.restore()
     win.focus()
   }
@@ -152,22 +189,5 @@ app.on('activate', () => {
     allWindows[0].focus()
   } else {
     createWindow()
-  }
-})
-
-// New window example arg: new windows url
-ipcMain.handle('open-win', (_, arg) => {
-  const childWindow = new BrowserWindow({
-    webPreferences: {
-      preload,
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  })
-
-  if (VITE_DEV_SERVER_URL) {
-    childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`)
-  } else {
-    childWindow.loadFile(indexHtml, { hash: arg })
   }
 })

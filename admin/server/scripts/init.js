@@ -22,7 +22,8 @@ const RolePermission = require('../models/rolePermission');
 /** 角色列表 */
 const ROLES = [
   { role_code: 'admin', role_name: '管理员',  description: '系统管理员，拥有全部权限', status: 1 },
-  { role_code: 'user',  role_name: '普通用户', description: '普通用户，仅限基础功能',   status: 1 }
+  { role_code: 'user',  role_name: '普通用户', description: '普通用户，仅限基础功能',   status: 1 },
+  { role_code: 'guest', role_name: '游客',     description: '游客用户，仅限对话功能',   status: 1 }
 ];
 
 /**

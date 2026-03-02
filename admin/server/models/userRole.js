@@ -8,7 +8,7 @@ const UserRole = sequelize.define('UserRole', {
     autoIncrement: true
   },
   user_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(36),
     allowNull: false
   },
   role_id: {

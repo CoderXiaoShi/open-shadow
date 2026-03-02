@@ -67,7 +67,7 @@ const userController = {
   },
 
   async register(ctx) {
-    const { username, password, nickname, email } = ctx.request.body;
+    const { username, password, nickname, email, is_guest } = ctx.request.body;
     try {
       const existingUser = await User.findOne({ where: { username } });
       if (existingUser) {
@@ -79,7 +79,7 @@ const userController = {
         return;
       }
 
-      const defaultRole = await Role.findOne({ where: { role_code: 'user' } });
+      const defaultRole = await Role.findOne({ where: { role_code: is_guest ? 'guest' : 'user' } });
 
       const user = await User.create({
         username,

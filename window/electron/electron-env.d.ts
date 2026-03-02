@@ -3,21 +3,17 @@
 declare namespace NodeJS {
   interface ProcessEnv {
     VSCODE_DEBUG?: 'true'
-    /**
-     * The built directory structure
-     *
-     * ```tree
-     * ├─┬ dist-electron
-     * │ ├─┬ main
-     * │ │ └── index.js    > Electron-Main
-     * │ └─┬ preload
-     * │   └── index.mjs   > Preload-Scripts
-     * ├─┬ dist
-     * │ └── index.html    > Electron-Renderer
-     * ```
-     */
     APP_ROOT: string
     /** /dist/ or /public/ */
     VITE_PUBLIC: string
+  }
+}
+
+interface Window {
+  ipcRenderer: {
+    send: (channel: string, ...args: unknown[]) => void
+    on: (channel: string, listener: (event: unknown, ...args: unknown[]) => void) => void
+    off: (channel: string, listener: (...args: unknown[]) => void) => void
+    invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
   }
 }
