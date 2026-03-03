@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import img from '../assets/img.webp'
+import img from '../assets/img.png'
 
 const API_BASE = 'http://localhost:3000'
 

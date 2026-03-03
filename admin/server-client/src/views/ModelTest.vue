@@ -95,7 +95,6 @@ const handleSend = async () => {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body:    JSON.stringify({ message: text, history })
     });
-
     if (!response.ok) {
       const json = await response.json().catch(() => ({}));
       throw new Error(json.message || `HTTP ${response.status}`);

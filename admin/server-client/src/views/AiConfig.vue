@@ -50,6 +50,13 @@
       <el-form :model="form" label-width="100px">
 
         <el-form-item label="模型">
+          <el-input
+            v-model="form.model"
+            style="width:80%"
+          />
+        </el-form-item>
+
+        <!-- <el-form-item label="模型">
           <el-select
             v-model="form.model"
             filterable
@@ -68,7 +75,7 @@
               <el-option value="claude-haiku-4-5-20251001" label="claude-haiku-4-5" />
             </el-option-group>
           </el-select>
-        </el-form-item>
+        </el-form-item> -->
 
         <el-form-item label="Temperature">
           <div class="slider-row">
