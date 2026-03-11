@@ -115,6 +115,7 @@ const running       = ref(false);
 const saving        = ref(false);
 const screenshotUrl = ref('');
 const autoSaved     = ref(false);
+const personaFormRef = ref();
 
 // 进度步骤
 const STEP_LABELS = ['抓取页面内容', '提取博主信息', '生成角色定义'];
@@ -194,6 +195,7 @@ const handleBuild = async () => {
             if (parsed.data?.screenshotUrl) screenshotUrl.value = parsed.data.screenshotUrl;
             autoSaved.value     = true;
             ElMessage.success('角色定义已生成并自动保存');
+            personaFormRef.value.load();
           } else if (parsed.type === 'error') {
             throw new Error(parsed.message);
           }
