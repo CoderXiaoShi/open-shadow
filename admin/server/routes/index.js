@@ -43,37 +43,29 @@ router.get('/api/permissions/tree', permissionController.getPermissionTree);
 router.get('/api/permissions/:id', permissionController.getPermission);
 
 // ── 素材管理 ─────────────────────────────────────────────────
-router.post('/api/materials/upload', materialController.upload);
+router.post('/api/materials/upload', checkPermission('material:upload'), materialController.upload);
 router.get('/api/materials', materialController.getList);
-router.post('/api/materials', materialController.create);
-router.put('/api/materials/:id', materialController.update);
-router.delete('/api/materials/:id', materialController.delete);
+router.post('/api/materials', checkPermission('material:add'), materialController.create);
+router.put('/api/materials/:id', checkPermission('material:edit'), materialController.update);
+router.delete('/api/materials/:id', checkPermission('material:delete'), materialController.delete);
 
 // ── 角色人设 ─────────────────────────────────────────────────
 router.get('/api/persona',              personaController.get);
-router.put('/api/persona',              personaController.save);
+router.put('/api/persona',              checkPermission('persona:edit'), personaController.save);
 router.get('/api/persona/build-prompt', personaController.buildPrompt);
 
 // ── AI 配置 ──────────────────────────────────────────────────
 router.get('/api/ai-config',       aiConfigController.get);
-router.put('/api/ai-config',       aiConfigController.save);
-router.post('/api/ai-config/test', aiConfigController.test);
+router.put('/api/ai-config',       checkPermission('ai-config:edit'), aiConfigController.save);
+router.post('/api/ai-config/test', checkPermission('ai-config:test'), aiConfigController.test);
 
 // ── 模型测试（SSE 流式） ──────────────────────────────────────
 router.post('/api/chat', chatController.chatStream);
 
-// 调试：确认当前系统提示词内容
-router.get('/api/chat/system-prompt', async (ctx) => {
-  const personaService = require('../services/personaService');
-  const p = await personaService.get();
-  const sp = p.role_definition || p.system_prompt || '';
-  ctx.body = { code: 200, data: { length: sp.length, preview: sp.slice(0, 200) } };
-});
-
 // ── AI 角色构建 ───────────────────────────────────────────────
-router.post('/api/ai-agent/build', aiAgentController.build);
+router.post('/api/ai-agent/build', checkPermission('ai-agent:build'), aiAgentController.build);
 router.get('/api/ai-agent',        aiAgentController.get);
-router.put('/api/ai-agent',        aiAgentController.save);
+router.put('/api/ai-agent',        checkPermission('ai-agent:edit'), aiAgentController.save);
 
 module.exports = router;
 

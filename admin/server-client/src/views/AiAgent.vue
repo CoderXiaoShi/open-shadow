@@ -72,6 +72,9 @@
       </div>
     </el-card>
 
+
+    <PersonaForm ref="personaFormRef" />
+
     <!-- 角色定义编辑器 -->
     <el-card shadow="never" class="section-card">
       <template #header>
@@ -104,6 +107,7 @@ import { ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { CircleCheck } from '@element-plus/icons-vue';
 import { aiAgent as aiAgentApi } from '../api/index.js';
+import PersonaForm from '../components/PersonaForm.vue';
 
 const url           = ref('');
 const content       = ref('');

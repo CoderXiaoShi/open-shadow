@@ -40,7 +40,7 @@ app.use(static(path.join(__dirname, 'uploads')));
 
 const startServer = async () => {
   try {
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     logger.info('数据库表结构同步成功');
 
     app.use(router.routes()).use(router.allowedMethods());

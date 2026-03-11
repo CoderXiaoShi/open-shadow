@@ -62,9 +62,15 @@ const BUTTONS = [
   { permission_code: 'system:menu:delete', permission_name: '删除菜单', parent_code: 'system:menu', sort: 3 },
   { permission_code: 'file:upload',        permission_name: '上传文件', parent_code: 'file',        sort: 1 },
   { permission_code: 'file:delete',        permission_name: '删除文件', parent_code: 'file',        sort: 2 },
-  { permission_code: 'material:add',    permission_name: '新增素材', parent_code: 'material', sort: 1 },
-  { permission_code: 'material:edit',   permission_name: '编辑素材', parent_code: 'material', sort: 2 },
-  { permission_code: 'material:delete', permission_name: '删除素材', parent_code: 'material', sort: 3 }
+  { permission_code: 'material:upload', permission_name: '上传素材', parent_code: 'material', sort: 1 },
+  { permission_code: 'material:add',    permission_name: '新增素材', parent_code: 'material', sort: 2 },
+  { permission_code: 'material:edit',   permission_name: '编辑素材', parent_code: 'material', sort: 3 },
+  { permission_code: 'material:delete', permission_name: '删除素材', parent_code: 'material', sort: 4 },
+  { permission_code: 'persona:edit',    permission_name: '编辑人设', parent_code: 'persona',   sort: 1 },
+  { permission_code: 'ai-config:edit',  permission_name: '编辑AI配置', parent_code: 'ai-config', sort: 1 },
+  { permission_code: 'ai-config:test',  permission_name: '测试AI配置', parent_code: 'ai-config', sort: 2 },
+  { permission_code: 'ai-agent:build',  permission_name: '构建AI角色', parent_code: 'ai-agent', sort: 1 },
+  { permission_code: 'ai-agent:edit',   permission_name: '编辑AI角色', parent_code: 'ai-agent', sort: 2 }
 ];
 
 /** 默认管理员账号 */
@@ -96,7 +102,7 @@ const section = (title) => console.log(`\n▸ ${title}`);
     await sequelize.authenticate();
     console.log('\n✔ 数据库连接成功');
 
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log('✔ 数据库表结构同步完成\n');
 
     // ── Step 1: 角色 ────────────────────────────────────────
