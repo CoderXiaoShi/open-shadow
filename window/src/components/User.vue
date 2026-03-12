@@ -139,4 +139,7 @@ onMounted(async () => {
   border: 5px solid rgb(0, 153, 255);
   pointer-events: none;
 }
+.wrapper:hover {
+  transform: scale(1.05);
+}
 </style>

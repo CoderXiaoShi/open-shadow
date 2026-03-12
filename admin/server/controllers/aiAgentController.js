@@ -27,20 +27,21 @@ const aiAgentController = {
     };
 
     try {
-      const { bloggerName, avatarUrl, roleDefinition, screenshotUrl } = await aiAgentService.build(
+      const { bloggerName, bloggerBio, avatarUrl, roleDefinition, screenshotUrl } = await aiAgentService.build(
         url.trim(),
         (step, message, extra = {}) => {
           send({ type: 'progress', step, message, ...extra });
         }
       );
 
-      // 自动保存：role_definition、name（有时）、avatar_url（有时）
+      // 自动保存：role_definition、name（有时）、avatar_url（有时）、bio（有时）
       const saveData = { role_definition: roleDefinition };
-      if (bloggerName) saveData.name = bloggerName;
+      if (bloggerName) saveData.name      = bloggerName;
+      if (bloggerBio)  saveData.bio       = bloggerBio;
       if (avatarUrl)   saveData.avatar_url = avatarUrl;
       await personaService.save(saveData);
 
-      send({ type: 'done', data: { role_definition: roleDefinition, screenshotUrl, name: bloggerName, avatar_url: avatarUrl } });
+      send({ type: 'done', data: { role_definition: roleDefinition, screenshotUrl, name: bloggerName, bio: bloggerBio, avatar_url: avatarUrl } });
     } catch (e) {
       send({ type: 'error', message: e.message || '分析失败' });
     } finally {
