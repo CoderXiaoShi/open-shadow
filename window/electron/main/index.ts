@@ -40,6 +40,43 @@ let tray: Tray | null = null
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
+const API_BASE = 'http://localhost:3000'
+
+interface Persona {
+  name: string
+  avatar_url: string
+  [key: string]: unknown
+}
+
+let personaData: Persona | null = null
+
+async function fetchPersona() {
+  try {
+    const res = await fetch(`${API_BASE}/api/persona`)
+    const json = await res.json()
+    console.log('[persona] fetch:', json)
+    if (json.code !== 200 || !json.data) return
+    personaData = json.data
+
+    if (tray) {
+      tray.setToolTip(personaData!.name || '智影')
+
+      const avatarUrl = personaData!.avatar_url
+      if (avatarUrl) {
+        const fullUrl = avatarUrl.startsWith('http') ? avatarUrl : `${API_BASE}${avatarUrl}`
+        const imgRes = await fetch(fullUrl)
+        const buffer = Buffer.from(await imgRes.arrayBuffer())
+        const image = nativeImage.createFromBuffer(buffer).resize({ width: 32, height: 32 })
+        tray.setImage(image)
+      }
+    }
+  } catch (e) {
+    console.error('[persona] fetch failed:', e)
+  }
+}
+
+ipcMain.handle('get-persona', () => personaData)
+
 async function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
   const winSize = 100
@@ -60,20 +97,20 @@ async function createWindow() {
     webPreferences: {
       preload,
       webSecurity: false,
+      nodeIntegration: true,
     },
   })
 
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
-    win.webContents.openDevTools()
   } else {
     win.loadFile(indexHtml)
   }
-
+  
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', new Date().toLocaleString())
+    // win.webContents.openDevTools()
   })
-
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:')) shell.openExternal(url)
     return { action: 'deny' }
@@ -116,25 +153,26 @@ function createTray() {
 app.whenReady().then(() => {
   createWindow()
   createTray()
+  fetchPersona()
 })
 
 // 打开聊天弹窗，定位在头像窗口左侧
 ipcMain.on('open-chat-window', () => {
   if (!win) return
 
-  // 已打开则聚焦
-  if (chatWin && !chatWin.isDestroyed()) {
-    chatWin.focus()
-    return
-  }
-
   const [x, y] = win.getPosition()
   const chatWidth  = 360
   const chatHeight = 520
   const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
-
   const chatX = x - chatWidth - 8
   const chatY = Math.min(y, sh - chatHeight - 15)
+
+  // 已存在：隐藏中则重新定位并显示，可见则聚焦
+  if (chatWin && !chatWin.isDestroyed()) {
+    chatWin.setPosition(chatX, chatY)
+    chatWin.isVisible() ? chatWin.focus() : chatWin.show()
+    return
+  }
 
   chatWin = new BrowserWindow({
     width: chatWidth,
@@ -150,6 +188,7 @@ ipcMain.on('open-chat-window', () => {
     webPreferences: {
       preload,
       webSecurity: false,
+      nodeIntegration: true,
     },
   })
 
@@ -159,7 +198,7 @@ ipcMain.on('open-chat-window', () => {
     chatWin.loadFile(indexHtml, { hash: 'chat' })
   }
   
-  chatWin.webContents.openDevTools()
+  // chatWin.webContents.openDevTools()
   chatWin.on('closed', () => {
     chatWin = null
   })
@@ -167,7 +206,35 @@ ipcMain.on('open-chat-window', () => {
 
 ipcMain.on('close-chat-window', () => {
   if (chatWin && !chatWin.isDestroyed()) {
-    chatWin.close()
+    chatWin.hide()
+  }
+})
+
+let dragInterval: ReturnType<typeof setInterval> | null = null
+
+ipcMain.on('start-drag', () => {
+  if (!win) return
+  const [initX, initY] = win.getPosition()
+  const initCursor = screen.getCursorScreenPoint()
+
+  if (dragInterval) clearInterval(dragInterval)
+
+  dragInterval = setInterval(() => {
+    if (!win) return
+    const cursor = screen.getCursorScreenPoint()
+    win.setSize(100, 100);
+    win.setPosition(
+      initX + cursor.x - initCursor.x,
+      initY + cursor.y - initCursor.y,
+      false
+    )
+  }, 16)
+})
+
+ipcMain.on('stop-drag', () => {
+  if (dragInterval) {
+    clearInterval(dragInterval)
+    dragInterval = null
   }
 })
 

@@ -3,8 +3,14 @@ const User = require('../models/user');
 const UserRole = require('../models/userRole');
 const RolePermission = require('../models/rolePermission');
 const Permission = require('../models/sysPermission');
+const { isPublicRoute } = require('../config/publicRoutes');
 
 const authMiddleware = async (ctx, next) => {
+  if (isPublicRoute(ctx.method, ctx.path)) {
+    await next();
+    return;
+  }
+
   const token = ctx.headers.authorization?.replace('Bearer ', '');
   if (!token) {
     ctx.status = 401;

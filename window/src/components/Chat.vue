@@ -13,6 +13,7 @@ const messages = ref<Message[]>([])
 const input = ref('')
 const isStreaming = ref(false)
 const listEl = ref<HTMLElement>()
+const personaName = ref('智影')
 
 async function scrollToBottom() {
   await nextTick()
@@ -94,16 +95,27 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const persona = await window.ipcRenderer.invoke('get-persona')
+    if (persona?.name) personaName.value = persona.name
+  } catch (e) {
+    console.error('[persona] fetch failed:', e)
+  }
   streamReply('请主动向用户打招呼，简短友好地介绍自己', false)
 })
+
+const hideWindow = () => {
+  window.ipcRenderer.send('close-chat-window')
+}
+
 </script>
 
 <template>
   <div class="chat-panel">
     <div class="titlebar">
-      <span class="title">智影</span>
-      <button class="close-btn" @click="window.ipcRenderer.send('close-chat-window')">✕</button>
+      <span class="title">{{ personaName }}</span>
+      <button class="close-btn" @click="hideWindow">✕</button>
     </div>
     <div class="messages" ref="listEl">
       <div v-for="(msg, i) in messages" :key="i" :class="['msg', msg.role]">

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import img from '../assets/img.png'
+import { onMounted, ref } from 'vue'
+import defaultImg from '../assets/img.png'
 
 const API_BASE = 'http://localhost:3000'
+
+const avatarSrc = ref(defaultImg)
 
 function randomStr() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
@@ -56,16 +58,67 @@ onMounted(async () => {
   } catch (e) {
     console.error('[guest] init failed:', e)
   }
+
+  try {
+    const persona = await window.ipcRenderer.invoke('get-persona')
+    if (persona?.avatar_url) {
+      const url = persona.avatar_url.startsWith('http')
+        ? persona.avatar_url
+        : `${API_BASE}${persona.avatar_url}`
+      avatarSrc.value = url
+    }
+  } catch (e) {
+    console.error('[persona] fetch failed:', e)
+  }
 })
 
 function openChat() {
   window.ipcRenderer.send('open-chat-window')
 }
+
+function onPointerDown(e: PointerEvent) {
+  if (e.button !== 0) return
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  window.ipcRenderer.send('start-drag')
+}
+
+function onPointerUp(e: PointerEvent) {
+  ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+  window.ipcRenderer.send('stop-drag')
+}
+
+const persona = ref({
+  name: '智影',
+  avatar_url: defaultImg
+})
+
+onMounted(async () => {
+  try {
+    const data = await window.ipcRenderer.invoke('get-persona')
+    console.log('[persona] fetch:', data)
+    persona.value.avatar_url = `${API_BASE}${data.avatar_url}`
+    // if (persona?.name) persona.value.name = persona.name
+    // if (persona?.avatar_url) {
+    //   const url = persona.avatar_url.startsWith('http')
+    //     ? persona.avatar_url
+    //     : `${API_BASE}${persona.avatar_url}`
+    //   persona.value.avatar_url = url
+    // }
+  } catch (e) {
+    console.error('[persona] fetch failed:', e)
+  }
+})
+
 </script>
 
 <template>
-  <div class="wrapper">
-    <img class="avatar-img" :src="img" @dblclick="openChat" />
+  <div
+    class="wrapper"
+    @pointerdown="onPointerDown"
+    @pointerup="onPointerUp"
+    @dblclick="openChat"
+  >
+    <img class="avatar-img" :src="persona.avatar_url" alt="avatar" />
   </div>
 </template>
 
@@ -76,15 +129,14 @@ function openChat() {
   display: flex;
   align-items: center;
   justify-content: center;
-  -webkit-app-region: drag;
+  user-select: none;
 }
 
 .avatar-img {
   width: 90%;
   height: 90%;
   border-radius: 50%;
-  border: 5px solid red;
-  cursor: pointer;
-  -webkit-app-region: no-drag;
+  border: 5px solid rgb(0, 153, 255);
+  pointer-events: none;
 }
 </style>
